@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "caption-craft-dev",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3006"],
+      "port": 3006
+    }
+  ]
+}
