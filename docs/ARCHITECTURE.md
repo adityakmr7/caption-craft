@@ -221,7 +221,9 @@ NEXT_PUBLIC_POSTHOG_KEY=
 
 The stack is chosen to keep fixed costs near zero and variable costs proportional to actual usage — no servers to provision, no GPU/model hosting. Full cost modeling lives in [COST-ANALYSIS.md](./COST-ANALYSIS.md).
 
-## 10. Caption rendering engine (open question)
+## 10. Caption rendering engine — HyperFrames evaluated, shelved for now (2026-07-24)
+
+**Status: shelved, not rejected.** Phase 3-4 proceeds with the original plan — hand-written FFmpeg drawtext filters per style (Section 1, Section 5). HyperFrames stays on the table as a future upgrade once there's a workaround for the latency finding below (most likely: the chunked/parallel matting approach sketched at the end of 10.2, not yet built or measured). The full evaluation is kept below as the record of *why*, so this doesn't need re-litigating from scratch later.
 
 The original plan (Section 5) is hand-written FFmpeg drawtext filters per style, run server-side. An alternative surfaced during planning: use **HyperFrames** — an existing HTML/CSS-based video composition engine — as the rendering layer for Phase 3-4 instead.
 
@@ -258,7 +260,11 @@ Built a full local checkout (`git clone heygen-com/hyperframes`, `bun install &&
 
 **The important correction to make here: this is a latency problem, not a cost problem.** 455 CPU-seconds of compute is cheap in dollar terms on any serverless CPU pricing (low cents per video, same order of magnitude as everything else in [COST-ANALYSIS.md](./COST-ANALYSIS.md)) — nothing about matting threatens the margin model. What it threatens is the **30-90 second turnaround promise**: at ~13x realtime, a 60-second video would take on the order of **13 minutes** for the matting step alone on this single-instance, CPU-only, unparallelized setup — before render/composite/upload. That's fine for an async, email-notified flow (already the planned UX — see [Section 5](#5-system-flow-video-processing-pipeline)), but it means embed-mode needs its own, honestly-communicated turnaround estimate ("ready in a few minutes"), not the same promise as rail-mode.
 
-**Ways to close the gap later, not decided yet:** horizontal parallelization (split frames across concurrent Lambda/Cloud Run invocations — wall-clock drops even though total compute-seconds stay similar), or simply keep embed-mode's slower turnaround as a permanent, disclosed characteristic of that tier rather than engineering around it.
+**Ways to close the gap later, not decided, not built, not measured — the workaround(s) to try before reviving this:**
+- **Chunked + parallel matting on a warm worker pool (most promising, try this first).** Matting is per-frame with no cross-frame dependency, so it's a clean fit for splitting a video into pieces and matting them concurrently. The catch: model load is ~1-2 min, so naively spinning up a fresh process per chunk can eat the parallelization gains — needs a pool of long-running workers that keep the model warm and get fed chunks, not a process-per-chunk design. Unmeasured — reasoned about, not tested.
+- **Duration cap on embed-mode specifically** (e.g. 30-60s) — doesn't fix the underlying rate, just bounds the worst case (30s cap ≈ 6.5 min worst case instead of 13). Cheap to add, real content (TikTok/Reels/Shorts) is mostly already under this anyway. Combine with chunking, don't treat as a substitute for it.
+- **Ruled out, not worth revisiting without new information:** running the heavy steps (matting, Puppeteer-based compositing) in the browser via WebContainer — WebContainer runs a WASM Node.js/npm-JS sandbox; the expensive parts of this pipeline (`onnxruntime` native inference, headless Chrome via Puppeteer, native FFmpeg) are compiled binaries WebContainer doesn't execute, not a packaging problem WebContainer solves. A *different* client-side path exists in principle (`onnxruntime-web` running a lighter, lower-quality segmentation model than `u2net_human_seg`) but that's a separate rewrite with a real quality tradeoff and the same device-variability problem noted in Section 4's Auth discussion of vendor consolidation — most target creators are on phones, not M1 Pros.
+- Simplest fallback if none of the above pan out: keep embed-mode's slower turnaround as a permanent, disclosed characteristic of that tier rather than engineering around it.
 
 ### 10.3 Render runtime: Cloud Run over Lambda (2026-07-24)
 

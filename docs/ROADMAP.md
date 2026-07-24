@@ -39,6 +39,7 @@ Goal: prove demand before writing the video pipeline. See [PRD.md Section 7](./P
 - FFmpeg WASM client-side audio extraction (send audio, not full video, to reduce upload size/cost)
 - Server-side FFmpeg caption burn-in per style
 - Output validated as 9:16
+- **HyperFrames was evaluated as an alternative rendering engine and shelved for now** (richer caption styles, but its matting-based "embed" look measured ~13x realtime — too slow to ship as-is). Full writeup and the workaround ideas to try before revisiting: [ARCHITECTURE.md Section 10](./ARCHITECTURE.md#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24). Proceed with plain FFmpeg drawtext styles for now.
 
 ## Phase 5 — Async processing (Week 5)
 
