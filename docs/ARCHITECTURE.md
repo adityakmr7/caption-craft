@@ -260,4 +260,19 @@ Built a full local checkout (`git clone heygen-com/hyperframes`, `bun install &&
 
 **Ways to close the gap later, not decided yet:** horizontal parallelization (split frames across concurrent Lambda/Cloud Run invocations — wall-clock drops even though total compute-seconds stay similar), or simply keep embed-mode's slower turnaround as a permanent, disclosed characteristic of that tier rather than engineering around it.
 
-**Still open:** this ran on a laptop, not the actual target cloud runtime — Lambda/Cloud Run cold-start and per-invocation pricing still need a real number before Phase 3 locks in a runtime choice.
+### 10.3 Render runtime: Cloud Run over Lambda (2026-07-24)
+
+Decided by checking current, sourced platform limits against what 10.2 actually measured — not vendor preference.
+
+| | AWS Lambda | Google Cloud Run (Jobs) |
+|---|---|---|
+| Execution timeout | **900s (15 min) hard ceiling, not adjustable** | Default 10 min, adjustable **up to 168 hours** for standard (non-GPU) tasks |
+| Max CPU | ~5.8 vCPU (at 10,240 MB, the memory ceiling — Lambda has no separate CPU dial, it scales with memory) | **8 vCPU**, independently configurable, up to 32 GiB memory |
+| Deployment model | Zip: 250MB unzipped. Heavier stacks need the container-image workaround (10GB cap via ECR) | Native container (any Dockerfile) — the standard path, not a workaround |
+| Multi-core fit | N/A above | Docs warn single-threaded apps won't benefit from >1 vCPU — **not our case**: 10.2 measured 312% CPU (3+ cores) already in active use by the matting step itself |
+
+**The decisive number:** Lambda's timeout is a fixed 900 seconds. Section 10.2 measured ~13x realtime for matting alone — a 60-second video's matting step alone would take on the order of 13 minutes, before render/composite/upload/transcription-wait are even added. That leaves **zero margin** inside Lambda's hard ceiling for anything but the shortest clips, with no way to request more (unlike Cloud Run Jobs, where the timeout is a config value, not a platform wall). Combined with a deployment stack (headless Chrome via Puppeteer + FFmpeg + ONNX runtime + a 168MB model) that maps far more naturally onto "run this Dockerfile" than onto Lambda's size-constrained packaging — **Cloud Run Jobs is the render runtime**, not Lambda.
+
+**Status: decided architecturally, not yet provisioned.** No cloud infrastructure has been created — this environment has the `gcloud` CLI installed but not currently authenticated (needs `gcloud auth login`), and no GCP project/billing is set up yet. That's a deliberate stopping point: creating billed cloud resources is a step to take deliberately, not as a side effect of a docs update.
+
+Sources: [AWS Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [Cloud Run job task timeout](https://docs.cloud.google.com/run/docs/configuring/task-timeout), [Cloud Run CPU allocation](https://docs.cloud.google.com/run/docs/configuring/services/cpu).
