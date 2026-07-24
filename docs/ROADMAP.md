@@ -8,8 +8,8 @@ Goal: prove demand before writing the video pipeline. See [PRD.md Section 7](./P
 |---|---|
 | Landing page (dark, glass-morphism, full spec) | ✅ done |
 | Waitlist capture → Supabase | ✅ done |
-| Domain purchase (captioncraft.xyz) | ⬜ user action, outside codebase |
-| 30-day content calendar execution (Twitter/Reddit/LinkedIn/IH) | ⬜ user action, outside codebase |
+| Domain purchase + deploy | ✅ done |
+| 30-day content calendar execution (Twitter/Reddit/LinkedIn/IH) | 🔄 in progress — posting on Twitter |
 | Concierge MVP: manually process 5 beta videos at $2 each | ⬜ recommended before Phase 1 |
 | Hit 50+ waitlist AND 3+ pre-sales by end of Week 3 | ⬜ gate for Phase 1 |
 
