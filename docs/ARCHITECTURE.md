@@ -236,13 +236,28 @@ The original plan (Section 5) is hand-written FFmpeg drawtext filters per style,
 Ran a real, small-scale test rather than continuing to speculate: downloaded a short free-license clip (Mixkit), added an original synthetic narration track (no real audio in the stock clip), ran it through the actual `embedded-captions` pipeline locally on an M1 Pro (8-core, 16GB — not weak hardware).
 
 - **Transcription (WhisperX, local, CPU):** did not finish transcribing an 11-second clip in over 4 minutes (25-30x+ realtime). Confirms the original architecture's choice of OpenAI's *hosted* Whisper API was correct — local/self-hosted transcription is not viable at the 30-90s/video target. **No change to Section 1's stack** — this validates it.
-- **Matting (`remove-background`, u2net_human_seg):** could not complete the test — requires a full local HyperFrames repo checkout (`HYPERFRAMES_ROOT`), which `npx hyperframes` alone doesn't provide. Render cost/speed for the matting step is **still genuinely unverified** — this needs a follow-up spike with a proper checkout, not this one.
-- **One concrete, measured data point:** the frame-extraction sub-step of matting alone used **551% CPU** (5+ cores in parallel) for an 11-second clip. Matting is documented as CPU-only by design (GPU/CoreML acceleration is explicitly banned in the tool due to past quality bugs), so this is a real, not a hypothetical, compute cost to plan for.
+- **Matting (`remove-background`, u2net_human_seg):** benchmarked for real (below). Compute cost is small in dollars; the real constraint is wall-clock latency.
 
 **Resulting architecture decision: rail vs. embed as a cost/pricing lever.** The `embedded-captions` engine itself distinguishes two caption modes:
 - **Rail** (plain lower-third subtitle) — **no matting required at all**. Fast, cheap, no CPU-heavy step.
-- **Embed** (word composited behind the subject) — requires the matting step measured above.
+- **Embed** (word composited behind the subject) — requires the matting step measured below.
 
-Given the measured cost above, **rail should be the default rendering mode for all plans**, with embed-style (matting-based) captions reserved as a Pro/Business-tier or opt-in feature where the extra compute cost is justified by the higher price point. This replaces the original assumption that all 6 (now up to ~32, via HyperFrames) styles cost the same to render — they don't, and pricing/plan gating should reflect that.
+Given the measurement below, **rail should be the default rendering mode for all plans**, with embed-style (matting-based) captions reserved as a Pro/Business-tier or opt-in feature — not primarily because it's expensive in dollars (it isn't, see below), but because it's slow enough to need a different turnaround promise than the 30-90s target. This replaces the original assumption that all 6 (now up to ~32, via HyperFrames) styles cost the same to render — they don't, and pricing/plan gating should reflect that.
 
-**Still open, next spike:** build a full local HyperFrames checkout (`HYPERFRAMES_ROOT`, `bun install && bun run build`) and get a real timed/costed number for the matting + render step specifically, ideally on the actual target cloud runtime (Lambda or Cloud Run, not a laptop) before Phase 3 starts.
+### 10.2 Matting benchmark — results (2026-07-24)
+
+Built a full local checkout (`git clone heygen-com/hyperframes`, `bun install && bun run build`) and set `HYPERFRAMES_ROOT` so `remove-background` could actually run (the earlier `npx`-only attempt couldn't reach this step at all). Ran `u2net_human_seg` on the same 11.2s test clip (720p, 671 frames @ 60fps):
+
+| Metric | Result |
+|---|---|
+| Wall-clock time | **145.9s** (~13x realtime) |
+| CPU time | 416.9s user + 38.8s system = 455.7 CPU-seconds |
+| Avg. CPU utilization | 312% (3+ cores) |
+| Throughput | ~4.6 fps at 720p |
+| Output quality | Clean segmentation on visual inspection; minor edge fringing traceable to the chroma-key source clip, not the tool |
+
+**The important correction to make here: this is a latency problem, not a cost problem.** 455 CPU-seconds of compute is cheap in dollar terms on any serverless CPU pricing (low cents per video, same order of magnitude as everything else in [COST-ANALYSIS.md](./COST-ANALYSIS.md)) — nothing about matting threatens the margin model. What it threatens is the **30-90 second turnaround promise**: at ~13x realtime, a 60-second video would take on the order of **13 minutes** for the matting step alone on this single-instance, CPU-only, unparallelized setup — before render/composite/upload. That's fine for an async, email-notified flow (already the planned UX — see [Section 5](#5-system-flow-video-processing-pipeline)), but it means embed-mode needs its own, honestly-communicated turnaround estimate ("ready in a few minutes"), not the same promise as rail-mode.
+
+**Ways to close the gap later, not decided yet:** horizontal parallelization (split frames across concurrent Lambda/Cloud Run invocations — wall-clock drops even though total compute-seconds stay similar), or simply keep embed-mode's slower turnaround as a permanent, disclosed characteristic of that tier rather than engineering around it.
+
+**Still open:** this ran on a laptop, not the actual target cloud runtime — Lambda/Cloud Run cold-start and per-invocation pricing still need a real number before Phase 3 locks in a runtime choice.
