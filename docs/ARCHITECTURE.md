@@ -231,4 +231,18 @@ The original plan (Section 5) is hand-written FFmpeg drawtext filters per style,
 1. **Render cost and speed at SaaS volume.** HyperFrames has cloud/Lambda/Cloud-Run render paths per its CLI, which is promising, but actual $/video and seconds/video for this pipeline aren't known yet — they need to be benchmarked against the 30-90s target and the credit-economics model in [COST-ANALYSIS.md](./COST-ANALYSIS.md), which currently assumes near-zero rendering cost beyond Whisper.
 2. **Content shape assumption.** Several of the catalog's identities rely on background-matting a single subject (talking-head framing). CaptionCraft's target content is mostly-but-not-exclusively talking-head; b-roll-heavy or multi-subject clips may not suit the matting-based styles even if the simpler overlay-style identities still work fine on any footage.
 
-**Recommendation:** run a feasibility spike before Phase 3 starts — render one real short-form clip through HyperFrames end-to-end, measure wall-clock time and cost, and check output quality on both a clean talking-head clip and a messier one. Decide fully after that, not before.
+### 10.1 Feasibility spike — results (2026-07-24)
+
+Ran a real, small-scale test rather than continuing to speculate: downloaded a short free-license clip (Mixkit), added an original synthetic narration track (no real audio in the stock clip), ran it through the actual `embedded-captions` pipeline locally on an M1 Pro (8-core, 16GB — not weak hardware).
+
+- **Transcription (WhisperX, local, CPU):** did not finish transcribing an 11-second clip in over 4 minutes (25-30x+ realtime). Confirms the original architecture's choice of OpenAI's *hosted* Whisper API was correct — local/self-hosted transcription is not viable at the 30-90s/video target. **No change to Section 1's stack** — this validates it.
+- **Matting (`remove-background`, u2net_human_seg):** could not complete the test — requires a full local HyperFrames repo checkout (`HYPERFRAMES_ROOT`), which `npx hyperframes` alone doesn't provide. Render cost/speed for the matting step is **still genuinely unverified** — this needs a follow-up spike with a proper checkout, not this one.
+- **One concrete, measured data point:** the frame-extraction sub-step of matting alone used **551% CPU** (5+ cores in parallel) for an 11-second clip. Matting is documented as CPU-only by design (GPU/CoreML acceleration is explicitly banned in the tool due to past quality bugs), so this is a real, not a hypothetical, compute cost to plan for.
+
+**Resulting architecture decision: rail vs. embed as a cost/pricing lever.** The `embedded-captions` engine itself distinguishes two caption modes:
+- **Rail** (plain lower-third subtitle) — **no matting required at all**. Fast, cheap, no CPU-heavy step.
+- **Embed** (word composited behind the subject) — requires the matting step measured above.
+
+Given the measured cost above, **rail should be the default rendering mode for all plans**, with embed-style (matting-based) captions reserved as a Pro/Business-tier or opt-in feature where the extra compute cost is justified by the higher price point. This replaces the original assumption that all 6 (now up to ~32, via HyperFrames) styles cost the same to render — they don't, and pricing/plan gating should reflect that.
+
+**Still open, next spike:** build a full local HyperFrames checkout (`HYPERFRAMES_ROOT`, `bun install && bun run build`) and get a real timed/costed number for the matting + render step specifically, ideally on the actual target cloud runtime (Lambda or Cloud Run, not a laptop) before Phase 3 starts.
