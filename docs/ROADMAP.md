@@ -28,18 +28,22 @@ Goal: prove demand before writing the video pipeline. See [PRD.md Section 7](./P
 - Cloudflare R2 bucket + upload API route
 - `videos` table + status tracking (pending/processing/completed/failed)
 
-## Phase 3 — Transcription (Week 3)
+## Phase 3-4 — Transcription + video processing (Weeks 3-4) — ✅ built, partially verified
 
-- OpenAI Whisper integration
-- `captions` + `words` tables populated from Whisper output
-- Style picker UI (start with the 4 styles already designed in the landing page's Style Showcase: Bold, Neon, Retro, Cinematic — add 2 more to reach "6 viral styles")
+Built together rather than sequentially - the two are one pipeline (`POST /api/videos`).
 
-## Phase 4 — Video processing (Week 4)
-
-- FFmpeg WASM client-side audio extraction (send audio, not full video, to reduce upload size/cost)
-- Server-side FFmpeg caption burn-in per style
-- Output validated as 9:16
-- **HyperFrames was evaluated as an alternative rendering engine and shelved for now** (richer caption styles, but its matting-based "embed" look measured ~13x realtime — too slow to ship as-is). Full writeup and the workaround ideas to try before revisiting: [ARCHITECTURE.md Section 10](./ARCHITECTURE.md#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24). Proceed with plain FFmpeg drawtext styles for now.
+- ✅ OpenAI Whisper integration (`app/lib/whisper.ts`) - code correct against the verified API spec, **unverified end-to-end** (no `OPENAI_API_KEY` set yet)
+- ✅ `videos`, `captions`, `words` tables live, populated from transcription output on a successful run
+- ✅ 6 caption styles shipped: Bold, Neon, Karaoke (word-by-word, one word at a time, centered) and Retro, Cinematic, Minimal (phrase-grouped, bottom-third) - `app/lib/captions/styles.ts`
+- ✅ Caption burn-in engine, **real end-to-end tested locally** on all 6 styles with a real video - visually verified, not just "compiles." One correction from the plan: not FFmpeg `drawtext` - the local FFmpeg build had no `libfreetype`, so text renders via `@napi-rs/canvas` to PNG, composited with FFmpeg's `overlay` filter instead. This is arguably better (real glow/shadow effects, no font-availability risk on the deploy target) and doesn't depend on how the production FFmpeg binary happens to be built.
+- ✅ Output validated as 9:16 (1080x1920, confirmed via `ffprobe` on real output)
+- ✅ Client-side audio extraction via `@ffmpeg/ffmpeg` (ffmpeg.wasm), **real end-to-end tested in-browser** (not just imported) - works through Next.js's actual bundle; a naive CDN-import test hits a same-origin Worker restriction that the real bundled path doesn't
+- ✅ Video upload UI + style picker wired into `/dashboard` (`app/components/dashboard/VideoUpload.tsx`)
+- ✅ Atomic credit deduction (`deduct_credit()` DB function) + full refund-on-failure path, tested for real (confirmed credits and the `credit_transactions` audit trail stay correct through a failed processing run)
+- ✅ **Security fix caught while building this**: Phase 1's `users` RLS policy allowed a signed-in user to update *any* column on their own row directly from the client, including `credits`. Removed - `public.users` now has no client-side update path at all; `credits`/`plan` only change server-side.
+- ❌ **Not verified**: an actual real video going through transcription + R2 storage end-to-end - blocked on `OPENAI_API_KEY` and the `CLOUDFLARE_R2_*` credentials, neither set yet. Everything upstream and downstream of those two calls is tested; those two calls themselves are code-correct but unconfirmed.
+- **HyperFrames was evaluated as an alternative rendering engine and shelved for now** (richer caption styles, but its matting-based "embed" look measured ~13x realtime — too slow to ship as-is). Full writeup and the workaround ideas to try before revisiting: [ARCHITECTURE.md Section 10](./ARCHITECTURE.md#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24).
+- **Known constraint, not yet solved**: processing currently runs synchronously inside the API request (no queue - Inngest is Phase 5 below). Fine for local dev and short clips; will hit Vercel's serverless execution limits in production before Phase 5 lands.
 
 ## Phase 5 — Async processing (Week 5)
 

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Type, Zap, VideoOff } from "lucide-react";
+import { Type, Zap } from "lucide-react";
 import { createClient } from "@/app/lib/supabase/server";
+import { VideoUpload } from "@/app/components/dashboard/VideoUpload";
 
 export const metadata: Metadata = {
   title: "Dashboard — CaptionCraft",
@@ -68,14 +69,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-card flex flex-col items-center gap-3 p-12 text-center">
-          <VideoOff className="h-8 w-8 text-[#71717a]" strokeWidth={1.5} />
-          <p className="font-medium text-white">Video upload isn&apos;t live yet</p>
-          <p className="max-w-[40ch] text-sm text-[#a1a1aa]">
-            You&apos;re in early access. We&apos;ll email you the moment you can upload your
-            first video.
-          </p>
-        </div>
+        <VideoUpload />
       </main>
     </div>
   );

@@ -189,6 +189,7 @@ CLOUDFLARE_R2_ACCESS_KEY_ID=
 CLOUDFLARE_R2_SECRET_ACCESS_KEY=
 CLOUDFLARE_R2_BUCKET=
 CLOUDFLARE_R2_ENDPOINT=
+CLOUDFLARE_R2_PUBLIC_URL=   # bucket's public dev URL or custom domain - not in the original plan, needed to construct download links
 
 # Payments
 STRIPE_SECRET_KEY=
@@ -212,8 +213,8 @@ NEXT_PUBLIC_POSTHOG_KEY=
 | Route | Status | Purpose |
 |---|---|---|
 | `POST /api/waitlist` | ✅ shipped | Validates + inserts email into `waitlist` |
-| `POST /api/videos` | ❌ planned | Accepts upload, deducts credit, stores in R2, enqueues job |
-| `GET /api/videos/:id` | ❌ planned | Poll processing status |
+| `POST /api/videos` | ✅ shipped, runs synchronously | Accepts upload, deducts credit, transcribes, burns in captions, stores in R2. No queue yet - see Phase 5 |
+| `GET /api/videos/:id` | ❌ planned | Poll processing status - not needed yet since the current route responds only once processing finishes |
 | `POST /api/webhooks/stripe` | ❌ planned | Subscription lifecycle events |
 | `POST /api/inngest` | ❌ planned | Inngest function handler (transcribe → format → burn-in → upload → notify) |
 
