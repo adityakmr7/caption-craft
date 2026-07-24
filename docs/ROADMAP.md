@@ -15,11 +15,12 @@ Goal: prove demand before writing the video pipeline. See [PRD.md Section 7](./P
 
 **Do not start Phase 1 until the gate above is met.** This is the single most important sequencing decision in the original plan — building the pipeline before validating demand is the risk this roadmap exists to avoid.
 
-## Phase 1 — Foundation (Week 1)
+## Phase 1 — Foundation (Week 1) — ✅ done
 
-- Decide Auth provider (Supabase Auth vs. Clerk — see [ARCHITECTURE.md Section 4](./ARCHITECTURE.md#4-auth)) and implement sign-in/sign-up
-- Create `users`, `subscriptions`, `credit_transactions` tables (SQL in [ARCHITECTURE.md Section 3](./ARCHITECTURE.md#3-database-schema))
-- Wire signup → 20 free credits grant
+- ✅ Auth provider decided: Supabase Auth (see [ARCHITECTURE.md Section 4](./ARCHITECTURE.md#4-auth)) — sign-up/sign-in pages, session middleware (`proxy.ts`), protected `/dashboard`
+- ✅ `users`, `subscriptions`, `credit_transactions` tables live (`supabase/schema.sql`, applied directly via `psql`)
+- ✅ Signup → 20 free credits grant, via a Postgres trigger on `auth.users` insert (`handle_new_user`), verified end-to-end
+- Note: `subscriptions.provider_subscription_id` is deliberately provider-agnostic (not `stripe_subscription_id`) — payment provider (Stripe vs. Paddle) is still undecided, see open questions in [PRD.md](./PRD.md#10-open-questions)
 
 ## Phase 2 — Upload & storage (Week 2)
 

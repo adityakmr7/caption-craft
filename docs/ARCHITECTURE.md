@@ -220,3 +220,15 @@ NEXT_PUBLIC_POSTHOG_KEY=
 ## 9. Why this stack (cost rationale)
 
 The stack is chosen to keep fixed costs near zero and variable costs proportional to actual usage — no servers to provision, no GPU/model hosting. Full cost modeling lives in [COST-ANALYSIS.md](./COST-ANALYSIS.md).
+
+## 10. Caption rendering engine (open question)
+
+The original plan (Section 5) is hand-written FFmpeg drawtext filters per style, run server-side. An alternative surfaced during planning: use **HyperFrames** — an existing HTML/CSS-based video composition engine — as the rendering layer for Phase 3-4 instead.
+
+**Why it's attractive:** HyperFrames' `embedded-captions` catalog ships ~32 distinct caption visual identities (matte-occlusion compositing, animated neon-sign strokes, glyph-decode reveals, etc.) with word-level timing and animation already built. That's a materially higher production ceiling than 6 hand-coded FFmpeg styles, for less custom animation code to write and maintain. It would also more directly deliver on the "word-by-word animation → 40% watch-time boost" feature already promised on the landing page, since that kind of animation is exactly what the engine is built for.
+
+**What's unverified, and blocks committing to this:**
+1. **Render cost and speed at SaaS volume.** HyperFrames has cloud/Lambda/Cloud-Run render paths per its CLI, which is promising, but actual $/video and seconds/video for this pipeline aren't known yet — they need to be benchmarked against the 30-90s target and the credit-economics model in [COST-ANALYSIS.md](./COST-ANALYSIS.md), which currently assumes near-zero rendering cost beyond Whisper.
+2. **Content shape assumption.** Several of the catalog's identities rely on background-matting a single subject (talking-head framing). CaptionCraft's target content is mostly-but-not-exclusively talking-head; b-roll-heavy or multi-subject clips may not suit the matting-based styles even if the simpler overlay-style identities still work fine on any footage.
+
+**Recommendation:** run a feasibility spike before Phase 3 starts — render one real short-form clip through HyperFrames end-to-end, measure wall-clock time and cost, and check output quality on both a clean talking-head clip and a messier one. Decide fully after that, not before.
