@@ -12,9 +12,9 @@ Companion to [PRD.md](./PRD.md). Covers the target architecture for the full pro
 | Database | PostgreSQL via Supabase | ✅ shipped (waitlist table only) | See [Section 3](#3-database-schema) |
 | DB access | `@supabase/supabase-js` (server-side, service-role client) | ✅ shipped | Direct client, no ORM — see [Section 2](#2-decision-no-orm-for-v1) |
 | Auth | Supabase Auth (recommended) or Clerk (original plan) | ❌ not started | Decision needed before build phase, see [Section 4](#4-auth) |
-| Video transcription | Groq Whisper API (`whisper-large-v3-turbo`) | ✅ shipped, unverified (no key set) | $0.04/hour; OpenAI-compatible endpoint, was OpenAI Whisper in the original plan - see [Section 10.4](#104-transcription-provider-openai--groq-2026-07-25) |
+| Video transcription | Groq Whisper API (`whisper-large-v3-turbo`) | ✅ shipped, verified with a real call | $0.04/hour; OpenAI-compatible endpoint, was OpenAI Whisper in the original plan - see [Section 10.4](#104-transcription-provider-openai--groq-2026-07-25) |
 | Video processing | ffmpeg.wasm (client-side audio extraction) + `@napi-rs/canvas` + FFmpeg `overlay` (server-side burn-in) | ✅ shipped, tested | Not FFmpeg `drawtext` - see [Section 10](#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24) |
-| File storage | Cloudflare R2 | ✅ shipped, unverified (no credentials set) | $0.015/GB/month |
+| File storage | Cloudflare R2 | ✅ shipped, verified with real uploads/downloads | $0.015/GB/month |
 | Payments | Stripe | ❌ not started | Subscriptions, 2.9% + 30¢/txn |
 | Async jobs | Inngest | ❌ not started | Free to 50K events/month |
 | Transactional email | Resend | ❌ not started | Free to 3K emails/month |

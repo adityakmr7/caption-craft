@@ -28,11 +28,13 @@ Goal: prove demand before writing the video pipeline. See [PRD.md Section 7](./P
 - Cloudflare R2 bucket + upload API route
 - `videos` table + status tracking (pending/processing/completed/failed)
 
-## Phase 3-4 — Transcription + video processing (Weeks 3-4) — ✅ built, partially verified
+## Phase 3-4 — Transcription + video processing (Weeks 3-4) — ✅ built and verified end-to-end
 
 Built together rather than sequentially - the two are one pipeline (`POST /api/videos`).
 
-- ✅ Whisper integration via Groq's OpenAI-compatible endpoint (`app/lib/whisper.ts`) - code correct against the verified API spec, **unverified end-to-end** (no `GROQ_API_KEY` set yet). See [ARCHITECTURE.md Section 10.4](./ARCHITECTURE.md#104-transcription-provider-openai--groq-2026-07-25) for why Groq over OpenAI.
+**Full pipeline confirmed working live (2026-07-25):** a real narrated video, through a real authenticated session, produced a real captioned output in 10.2 seconds. Verified, not assumed: `videos.status = completed`, transcript text and word timings in `captions`/`words` matched the actual narration, credits deducted 20 → 19 with exactly one `credit_transactions` row, and the output video (1080x1920, downloaded and frame-checked) shows the correct word burned in at the correct moment in the Bold style.
+
+- ✅ Whisper integration via Groq's OpenAI-compatible endpoint (`app/lib/whisper.ts`) - **verified with a real call**, real word-level timestamps back. See [ARCHITECTURE.md Section 10.4](./ARCHITECTURE.md#104-transcription-provider-openai--groq-2026-07-25) for why Groq over OpenAI.
 - ✅ `videos`, `captions`, `words` tables live, populated from transcription output on a successful run
 - ✅ 6 caption styles shipped: Bold, Neon, Karaoke (word-by-word, one word at a time, centered) and Retro, Cinematic, Minimal (phrase-grouped, bottom-third) - `app/lib/captions/styles.ts`
 - ✅ Caption burn-in engine, **real end-to-end tested locally** on all 6 styles with a real video - visually verified, not just "compiles." One correction from the plan: not FFmpeg `drawtext` - the local FFmpeg build had no `libfreetype`, so text renders via `@napi-rs/canvas` to PNG, composited with FFmpeg's `overlay` filter instead. This is arguably better (real glow/shadow effects, no font-availability risk on the deploy target) and doesn't depend on how the production FFmpeg binary happens to be built.
@@ -41,7 +43,7 @@ Built together rather than sequentially - the two are one pipeline (`POST /api/v
 - ✅ Video upload UI + style picker wired into `/dashboard` (`app/components/dashboard/VideoUpload.tsx`)
 - ✅ Atomic credit deduction (`deduct_credit()` DB function) + full refund-on-failure path, tested for real (confirmed credits and the `credit_transactions` audit trail stay correct through a failed processing run)
 - ✅ **Security fix caught while building this**: Phase 1's `users` RLS policy allowed a signed-in user to update *any* column on their own row directly from the client, including `credits`. Removed - `public.users` now has no client-side update path at all; `credits`/`plan` only change server-side.
-- ❌ **Not verified**: an actual real video going through transcription + R2 storage end-to-end - blocked on `GROQ_API_KEY` and the `CLOUDFLARE_R2_*` credentials, neither set yet. Everything upstream and downstream of those two calls is tested; those two calls themselves are code-correct but unconfirmed.
+- ✅ R2 storage - **verified with real uploads/downloads** plus a real public URL fetch (200, content matched) before the full pipeline run
 - **HyperFrames was evaluated as an alternative rendering engine and shelved for now** (richer caption styles, but its matting-based "embed" look measured ~13x realtime — too slow to ship as-is). Full writeup and the workaround ideas to try before revisiting: [ARCHITECTURE.md Section 10](./ARCHITECTURE.md#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24).
 - **Known constraint, not yet solved**: processing currently runs synchronously inside the API request (no queue - Inngest is Phase 5 below). Fine for local dev and short clips; will hit Vercel's serverless execution limits in production before Phase 5 lands.
 
