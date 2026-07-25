@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { UploadCloud, Loader2, CheckCircle2, Download, RotateCcw } from "lucide-react";
 import { CAPTION_STYLES, CAPTION_STYLE_IDS } from "@/app/lib/captions/styles";
+import type { FileData } from "@ffmpeg/ffmpeg";
 
 type Stage =
   | "idle"
@@ -183,16 +184,48 @@ async function extractAudio(file: File): Promise<Blob> {
   const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
 
   const ffmpeg = new FFmpeg();
-  const base = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
+  let sawAudioStream = false;
+  ffmpeg.on("log", ({ message }) => {
+    if (/Stream #\d+:\d+.*Audio/i.test(message)) sawAudioStream = true;
   });
+
+  const base = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+  try {
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
+    });
+  } catch {
+    throw new Error(
+      "Couldn't load the audio processor. Check your connection and try again."
+    );
+  }
 
   const inputName = "input" + fileExtension(file.name);
   await ffmpeg.writeFile(inputName, await fetchFile(file));
-  await ffmpeg.exec(["-i", inputName, "-vn", "-acodec", "libmp3lame", "-q:a", "4", "audio.mp3"]);
-  const data = await ffmpeg.readFile("audio.mp3");
+
+  if (!sawAudioStream) {
+    // ffmpeg logs stream info before exec() finishes; give it a moment.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  const exitCode = await ffmpeg
+    .exec(["-i", inputName, "-vn", "-acodec", "libmp3lame", "-q:a", "4", "audio.mp3"])
+    .catch(() => -1);
+
+  if (!sawAudioStream) {
+    throw new Error("This video doesn't have an audio track, so there's nothing to caption.");
+  }
+  if (exitCode !== 0) {
+    throw new Error("Couldn't process this video's audio. Try a different file.");
+  }
+
+  let data: FileData;
+  try {
+    data = await ffmpeg.readFile("audio.mp3");
+  } catch {
+    throw new Error("Couldn't extract audio from this video. Try a different file.");
+  }
 
   return new Blob([new Uint8Array(data as Uint8Array)], { type: "audio/mp3" });
 }
