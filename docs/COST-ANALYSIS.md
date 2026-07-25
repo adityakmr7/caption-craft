@@ -19,18 +19,18 @@ Domain ($10, one-time) + $0–$6/month infrastructure until there's real usage. 
 
 ## Per-unit economics
 
-A 2-minute video costs ~$0.012 to transcribe via Whisper ($0.006/minute). At the Pro plan's effective per-video price (~$0.058 = $29 / 500 credits), that's roughly a 5x markup on the raw Whisper cost alone — before accounting for the fact that most users don't exhaust their credit quota (see below).
+A 2-minute video costs ~$0.001 to transcribe via Groq's Whisper endpoint ($0.04/hour ≈ $0.00067/minute, using `whisper-large-v3-turbo` — see [ARCHITECTURE.md Section 10.4](./ARCHITECTURE.md#104-transcription-provider-openai--groq-2026-07-25)). At the Pro plan's effective per-video price (~$0.058 = $29 / 500 credits), that's roughly a 58x markup on the raw transcription cost alone — before accounting for the fact that most users don't exhaust their credit quota (see below). This is cheaper than the original plan's OpenAI estimate (~$0.006/minute); the Groq switch was made for its development-friendly free tier, not for this cost difference, but the cost difference is real and favorable.
 
 ## Credit economics
 
-| Plan | Price | Credits | Modeled API cost | Modeled margin |
+| Plan | Price | Credits | Modeled transcription cost | Modeled margin |
 |---|---|---|---|---|
-| Free | $0 | 20 | ~$0.24 | — (acquisition cost, not profit) |
-| Starter | $15/mo | 100 | ~$1.20 | 92% |
-| Pro | $29/mo | 500 | ~$6.00 | 79% |
-| Business | $79/mo | 2,000 | ~$24.00 | 70% |
+| Free | $0 | 20 | ~$0.03 | — (acquisition cost, not profit) |
+| Starter | $15/mo | 100 | ~$0.13 | ~99% |
+| Pro | $29/mo | 500 | ~$0.67 | ~98% |
+| Business | $79/mo | 2,000 | ~$2.66 | ~97% |
 
-**Why actual margin should run higher than modeled:** most subscribers won't use their full monthly quota. A Pro user modeled at 500 videos might really process ~200, dropping actual Whisper spend from ~$6.00 to ~$2.40/mo and pushing real margin toward 85–90%. This is an assumption to track, not a guarantee — if actual usage tracks closer to the full quota (e.g., because bulk-processing agencies buy Pro specifically to run it hard), margin will compress toward the modeled 79%, and pricing may need revisiting.
+Updated for the Groq switch ([ARCHITECTURE.md Section 10.4](./ARCHITECTURE.md#104-transcription-provider-openai--groq-2026-07-25)); these were ~92/79/70% under the original OpenAI-rate estimate. Same 2-minute-average-video assumption as before, still directional not measured. **Transcription cost is no longer the binding cost driver either way** — it was already small under the OpenAI estimate and is smaller still under Groq's. The real cost/latency question is the render step for embed-mode captions (matting), covered in [ARCHITECTURE.md Section 10.2](./ARCHITECTURE.md#102-matting-benchmark--results-2026-07-24), not transcription.
 
 ## Comparison to the alternative (video generator)
 

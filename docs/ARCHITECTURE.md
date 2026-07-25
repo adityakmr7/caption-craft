@@ -12,9 +12,9 @@ Companion to [PRD.md](./PRD.md). Covers the target architecture for the full pro
 | Database | PostgreSQL via Supabase | ✅ shipped (waitlist table only) | See [Section 3](#3-database-schema) |
 | DB access | `@supabase/supabase-js` (server-side, service-role client) | ✅ shipped | Direct client, no ORM — see [Section 2](#2-decision-no-orm-for-v1) |
 | Auth | Supabase Auth (recommended) or Clerk (original plan) | ❌ not started | Decision needed before build phase, see [Section 4](#4-auth) |
-| Video transcription | OpenAI Whisper API | ❌ not started | $0.006/minute |
-| Video processing | FFmpeg WASM (client-side audio extraction) + FFmpeg (server-side burn-in) | ❌ not started | |
-| File storage | Cloudflare R2 | ❌ not started | $0.015/GB/month |
+| Video transcription | Groq Whisper API (`whisper-large-v3-turbo`) | ✅ shipped, unverified (no key set) | $0.04/hour; OpenAI-compatible endpoint, was OpenAI Whisper in the original plan - see [Section 10.4](#104-transcription-provider-openai--groq-2026-07-25) |
+| Video processing | ffmpeg.wasm (client-side audio extraction) + `@napi-rs/canvas` + FFmpeg `overlay` (server-side burn-in) | ✅ shipped, tested | Not FFmpeg `drawtext` - see [Section 10](#10-caption-rendering-engine--hyperframes-evaluated-shelved-for-now-2026-07-24) |
+| File storage | Cloudflare R2 | ✅ shipped, unverified (no credentials set) | $0.015/GB/month |
 | Payments | Stripe | ❌ not started | Subscriptions, 2.9% + 30¢/txn |
 | Async jobs | Inngest | ❌ not started | Free to 50K events/month |
 | Transactional email | Resend | ❌ not started | Free to 3K emails/month |
@@ -129,7 +129,7 @@ sequenceDiagram
     participant DB as Supabase Postgres
     participant R2 as Cloudflare R2
     participant Queue as Inngest
-    participant Whisper as OpenAI Whisper
+    participant Whisper as Groq Whisper
     participant Email as Resend
 
     Browser->>Browser: Extract audio (FFmpeg WASM)
@@ -181,8 +181,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 
-# AI
-OPENAI_API_KEY=
+# AI (Groq's Whisper endpoint - OpenAI-compatible, swap to OPENAI_API_KEY + api.openai.com if ever needed)
+GROQ_API_KEY=
 
 # Storage
 CLOUDFLARE_R2_ACCESS_KEY_ID=
@@ -283,3 +283,17 @@ Decided by checking current, sourced platform limits against what 10.2 actually 
 **Status: decided architecturally, not yet provisioned.** No cloud infrastructure has been created — this environment has the `gcloud` CLI installed but not currently authenticated (needs `gcloud auth login`), and no GCP project/billing is set up yet. That's a deliberate stopping point: creating billed cloud resources is a step to take deliberately, not as a side effect of a docs update.
 
 Sources: [AWS Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [Cloud Run job task timeout](https://docs.cloud.google.com/run/docs/configuring/task-timeout), [Cloud Run CPU allocation](https://docs.cloud.google.com/run/docs/configuring/services/cpu).
+
+## 10.4 Transcription provider: OpenAI → Groq (2026-07-25)
+
+`app/lib/whisper.ts` now calls Groq's Whisper endpoint (`api.groq.com/openai/v1/audio/transcriptions`) instead of OpenAI's. This is a low-risk swap, not a re-architecture: Groq's endpoint is OpenAI-compatible - identical request shape (`model`, `response_format=verbose_json`, `timestamp_granularities[]=word`) and identical response shape (a `words` array with `word`/`start`/`end`), confirmed against Groq's docs before implementing, not assumed from the "OpenAI-compatible" label alone.
+
+**Why:** development/testing convenience - Groq's free tier gives a decent quota for exercising the pipeline without spending against a paid OpenAI key while the app isn't live yet.
+
+**Model:** `whisper-large-v3-turbo` ($0.04/hour audio, ~12% WER) over `whisper-large-v3` ($0.111/hour, ~10.3% WER) - the cheaper/faster tier is the right default for development; revisit if transcription accuracy becomes a real product issue.
+
+**Reverting later, if ever needed:** change the base URL, `Authorization` key (`GROQ_API_KEY` → `OPENAI_API_KEY`), and `model` string in `transcribeAudio()` - everything else (parsing, error handling, the calling code in `app/api/videos/route.ts`) stays the same.
+
+**Still unverified:** like the R2 credentials, `GROQ_API_KEY` isn't set yet - this swap is code-correct against Groq's documented spec but hasn't made a real call.
+
+Source: [Groq speech-to-text docs](https://console.groq.com/docs/speech-to-text).
