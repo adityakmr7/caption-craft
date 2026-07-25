@@ -72,6 +72,15 @@ Built together rather than sequentially - the two are one pipeline (`POST /api/v
 - Sentry + PostHog wired in
 - Public launch
 
+## Restyle without re-transcribing — ✅ built and verified (2026-07-25)
+
+Not an original roadmap phase — built in response to a competitor pattern (whitestair.com: caption with a default style immediately, let the user browse other templates afterward) that the user asked to replicate. Feasible cheaply specifically because transcription and rendering were already separate steps.
+
+- ✅ `POST /api/videos/[id]/restyle` — re-runs `burnInCaptions()` against the video's already-stored transcript (`captions`/`words`) and a new style. No Groq call, no credit charge.
+- ✅ Dashboard: after a video completes, the style picker reappears below the result — clicking a different style calls restyle in place and swaps the shown/downloadable video.
+- ✅ **Verified live, not assumed:** uploaded with Bold, confirmed 19 credits and one `-1 video_processed` transaction; called restyle to Neon, confirmed **19 credits unchanged, zero new transactions, `videos.style` updated to `neon`**, and downloaded the actual output to confirm the pink glow Neon look rendered correctly from the same transcript. Took 8.8s (all render, no transcription call) vs. 10.2s for the original full upload.
+- Cache-busting: the returned/stored `processed_url` gets a `?t=<timestamp>` query param, since the R2 object key is reused (overwritten) per restyle rather than versioned - avoids serving a stale cached copy after switching styles.
+
 ---
 
 Each phase assumes 4–6 hrs/day, solo developer, per the original estimate. Phase durations are a planning input, not a commitment — Phase 0's outcome (what beta users actually complain about) should be allowed to reorder Phases 2–4 if it turns out styling matters more than upload UX, or vice versa.

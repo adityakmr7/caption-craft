@@ -22,6 +22,9 @@ export function VideoUpload() {
   const [stage, setStage] = useState<Stage>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [resultUrl, setResultUrl] = useState("");
+  const [videoId, setVideoId] = useState("");
+  const [restyling, setRestyling] = useState(false);
+  const [restyleError, setRestyleError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = stage === "extracting-audio" || stage === "uploading" || stage === "processing";
@@ -65,10 +68,38 @@ export function VideoUpload() {
       }
 
       setResultUrl(data.processedUrl);
+      setVideoId(data.videoId);
       setStage("completed");
     } catch (err) {
       setStage("error");
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
+    }
+  }
+
+  async function handleRestyle(newStyle: string) {
+    if (restyling || newStyle === style || !videoId) return;
+
+    setRestyling(true);
+    setRestyleError("");
+
+    try {
+      const res = await fetch(`/api/videos/${videoId}/restyle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style: newStyle }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Couldn't apply that style.");
+      }
+
+      setResultUrl(data.processedUrl);
+      setStyle(newStyle);
+    } catch (err) {
+      setRestyleError(err instanceof Error ? err.message : "Couldn't apply that style.");
+    } finally {
+      setRestyling(false);
     }
   }
 
@@ -77,6 +108,8 @@ export function VideoUpload() {
     setStage("idle");
     setErrorMessage("");
     setResultUrl("");
+    setVideoId("");
+    setRestyleError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -99,6 +132,35 @@ export function VideoUpload() {
             <RotateCcw className="h-4 w-4" strokeWidth={2.5} />
             Caption another
           </button>
+        </div>
+
+        <div className="mt-4 w-full border-t border-white/10 pt-6">
+          <p className="mb-3 flex items-center justify-center gap-2 text-sm text-[#a1a1aa]">
+            {restyling && <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.5} />}
+            Not feeling this look? Try another style — same transcript, no extra credit
+          </p>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {CAPTION_STYLE_IDS.map((id) => {
+              const s = CAPTION_STYLES[id];
+              const active = style === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={restyling}
+                  onClick={() => handleRestyle(id)}
+                  className={`rounded-xl border px-3 py-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    active
+                      ? "border-[#a855f7]/50 bg-[#a855f7]/10 text-white"
+                      : "border-white/10 bg-white/[0.02] text-[#a1a1aa] hover:border-white/20"
+                  }`}
+                >
+                  <span style={{ color: active ? s.color : undefined }}>{s.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {restyleError && <p className="mt-3 text-sm text-red-400">{restyleError}</p>}
         </div>
       </div>
     );

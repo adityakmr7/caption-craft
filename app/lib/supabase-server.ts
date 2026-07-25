@@ -53,6 +53,7 @@ type Database = {
           original_url: string | null;
           processed_url: string | null;
           status: string;
+          style: string;
           error_message: string | null;
           duration_seconds: number | null;
           completed_at: string | null;
