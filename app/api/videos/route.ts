@@ -31,7 +31,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const form = await request.formData().catch(() => null);
+  let form: FormData | null = null;
+  try {
+    form = await request.formData();
+  } catch (err) {
+    console.error("Failed to parse upload form data", err);
+  }
   const videoFile = form?.get("video");
   const audioFile = form?.get("audio");
   const style = form?.get("style");
