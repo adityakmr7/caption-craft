@@ -197,7 +197,13 @@ function Navbar() {
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-3">
+          <a
+            href="/studio"
+            className="btn-ghost inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
+          >
+            Try Studio
+          </a>
           <a
             href="#waitlist"
             className="btn-gradient inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
@@ -237,6 +243,13 @@ function Navbar() {
                   {l.label}
                 </a>
               ))}
+              <a
+                href="/studio"
+                onClick={() => setMobileOpen(false)}
+                className="btn-ghost inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold"
+              >
+                Try Studio
+              </a>
               <a
                 href="#waitlist"
                 onClick={() => setMobileOpen(false)}
@@ -340,13 +353,13 @@ function Hero() {
             >
               Join Waitlist - 50% Off Forever
             </a>
-            <button
-              type="button"
+            <a
+              href="/studio"
               className="btn-ghost inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold whitespace-nowrap"
             >
               <Play className="h-4 w-4" strokeWidth={2} />
-              Watch demo
-            </button>
+              Try it free
+            </a>
           </HeroReveal>
 
           <HeroReveal delay={0.6} className="flex flex-wrap items-center gap-6">
