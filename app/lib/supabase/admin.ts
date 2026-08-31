@@ -1,5 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Service-role client: bypasses Row Level Security. Server-only — never
+// import this from a Client Component or expose SUPABASE_SERVICE_ROLE_KEY
+// to the browser. Use app/lib/supabase/server.ts for anything that should
+// respect the signed-in user's own RLS policies.
+
 type Database = {
   public: {
     Tables: {
@@ -17,7 +22,7 @@ type Database = {
 
 let client: ReturnType<typeof createClient<Database>> | null = null;
 
-export function getSupabaseServerClient() {
+export function getSupabaseAdminClient() {
   if (client) return client;
 
   const url = process.env.SUPABASE_URL;

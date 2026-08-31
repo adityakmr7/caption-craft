@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/app/lib/supabase-server";
+import { getSupabaseAdminClient } from "@/app/lib/supabase/admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseAdminClient();
     const { error } = await supabase.from("waitlist").insert({ email });
 
     if (error && error.code !== "23505") {

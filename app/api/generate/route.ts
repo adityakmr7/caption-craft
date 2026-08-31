@@ -1,0 +1,220 @@
+import { NextResponse } from "next/server";
+import { generateText, Output } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { z } from "zod";
+import { createClient, getUser } from "@/app/lib/supabase/server";
+
+// Using Gemini directly (not Vercel AI Gateway) for now — Gateway requires
+// a card on file even for free credits; Google AI Studio's free tier
+// doesn't. Swap back to a gateway model string once that's sorted.
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const TONES = ["professional", "casual", "hype"] as const;
+type Tone = (typeof TONES)[number];
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB, per PRD §7.1
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
+const FREE_LIFETIME_CAP = 3; // PRD §7.1
+
+const variationSchema = z.object({
+  variations: z
+    .array(
+      z.object({
+        text: z
+          .string()
+          .describe(
+            "The LinkedIn post body, 150-220 words, hook-first (first 1-2 lines are what shows before 'see more')."
+          ),
+        hashtags: z
+          .array(z.string())
+          .describe(
+            "3-5 hashtags relevant to Indian startup/build-in-public audiences, each starting with #."
+          ),
+      })
+    )
+    .length(3)
+    .describe("Exactly 3 distinct post variations for the same screenshot and tone."),
+});
+
+const TONE_GUIDANCE: Record<Tone, string> = {
+  professional:
+    "Professional: measured, credible, founder-to-founder. No hype words, no excessive punctuation.",
+  casual:
+    "Casual: conversational, first-person, like texting a friend about a milestone. Contractions are fine.",
+  hype:
+    "Hype: high-energy, celebratory, confident. Still specific and factual — never vague hype for its own sake.",
+};
+
+const SYSTEM_PROMPT = `You write LinkedIn posts for Indian startup founders documenting their build-in-public journey. You read a screenshot the founder uploaded (a metric, a shipped feature, a payout notification, a milestone) and turn it into 3 distinct, specific LinkedIn post variations in the requested tone.
+
+Rules:
+- Ground every post in what is actually visible in the screenshot. Never invent numbers or facts not shown or stated.
+- Write like a founder talking, not an AI summarizing. No "In today's fast-paced world," no generic AI-wrapper phrasing.
+- Use Indian context by default: ₹ for currency, IST-appropriate references, Indian company/market context — never default to $ or US-centric examples unless the screenshot itself shows them.
+- Each of the 3 variations must take a genuinely different angle on the same underlying fact (e.g. the number itself, the story behind it, the lesson learned) — not just reworded sentences.
+- Hashtags come from a curated Indian-startup set such as #BuildInPublic, #StartupIndia, #SaaS, #IndianStartups, #Bootstrapped — pick 3-5 that actually fit, never generic or random tags.
+- Keep each post 150-220 words, hook-first: the first 1-2 lines must work as a standalone hook since that's what shows before "see more" on LinkedIn.`;
+
+export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
+  }
+
+  const file = formData.get("screenshot");
+  const toneInput = formData.get("tone");
+
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Upload a screenshot." }, { status: 400 });
+  }
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: "Screenshot must be PNG, JPEG, or WebP." },
+      { status: 400 }
+    );
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return NextResponse.json(
+      { error: "Screenshot must be under 10MB." },
+      { status: 400 }
+    );
+  }
+  if (typeof toneInput !== "string" || !TONES.includes(toneInput as Tone)) {
+    return NextResponse.json({ error: "Invalid tone." }, { status: 400 });
+  }
+  const tone = toneInput as Tone;
+
+  const supabase = await createClient();
+
+  // Atomically check-and-reserve a free-generation slot *before* calling
+  // Gemini (PRD §7.1). This used to be a plain SELECT-then-UPDATE, which is
+  // a check-then-act race: concurrent requests from the same user could all
+  // pass the check before any of them incremented the counter, exceeding
+  // the cap and spending real Gemini quota on every extra call. The RPC
+  // does the check + increment as one row-locked transaction instead. See
+  // supabase/migrations/0003_atomic_free_generation.sql.
+  const { data: reservation, error: reservationError } = await supabase
+    .rpc("increment_free_generation", { p_user_id: user.id })
+    .single()
+    .overrideTypes<{
+      allowed: boolean;
+      plan: string | null;
+      free_generations_used: number | null;
+    }>();
+
+  if (reservationError || !reservation || reservation.plan === null) {
+    return NextResponse.json(
+      { error: "Couldn't load your account. Try again." },
+      { status: 500 }
+    );
+  }
+
+  if (!reservation.allowed) {
+    return NextResponse.json(
+      {
+        error: "You've used all 3 free generations. Join the waitlist for paid access.",
+        code: "FREE_LIMIT_REACHED",
+      },
+      { status: 402 }
+    );
+  }
+
+  const plan = reservation.plan;
+  const usedAfterReservation = reservation.free_generations_used ?? 0;
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  let output: z.infer<typeof variationSchema>;
+  try {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"),
+      instructions: SYSTEM_PROMPT,
+      output: Output.object({ schema: variationSchema }),
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Tone: ${tone} — ${TONE_GUIDANCE[tone]}\n\nGenerate 3 LinkedIn post variations from this screenshot.`,
+            },
+            { type: "file", mediaType: file.type, data: bytes },
+          ],
+        },
+      ],
+    });
+    output = result.output;
+  } catch (err) {
+    console.error("generation failed", err);
+    // Give back the reserved slot — a failed attempt shouldn't cost the
+    // user one of their 3 free generations.
+    if (plan === "free") {
+      await supabase
+        .from("profiles")
+        .update({ free_generations_used: Math.max(0, usedAfterReservation - 1) })
+        .eq("id", user.id);
+    }
+    return NextResponse.json(
+      { error: "Generation failed. Try again." },
+      { status: 502 }
+    );
+  }
+
+  // Upload after generation succeeds, so a failed generation never leaves
+  // an orphaned file in storage.
+  const ext = file.type.split("/")[1] ?? "png";
+  const screenshotPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from("screenshots")
+    .upload(screenshotPath, bytes, { contentType: file.type });
+
+  if (uploadError) {
+    console.error("screenshot upload failed", uploadError);
+    return NextResponse.json(
+      { error: "Couldn't save your screenshot. Try again." },
+      { status: 500 }
+    );
+  }
+
+  const { data: generation, error: insertError } = await supabase
+    .from("generations")
+    .insert({
+      user_id: user.id,
+      screenshot_path: screenshotPath,
+      tone,
+      variations: output.variations,
+    })
+    .select("id, created_at")
+    .single();
+
+  if (insertError || !generation) {
+    console.error("generation insert failed", insertError);
+    return NextResponse.json(
+      { error: "Couldn't save your generation. Try again." },
+      { status: 500 }
+    );
+  }
+
+  const remainingFree =
+    plan === "free" ? Math.max(0, FREE_LIFETIME_CAP - usedAfterReservation) : null;
+
+  return NextResponse.json({
+    id: generation.id,
+    createdAt: generation.created_at,
+    tone,
+    variations: output.variations,
+    remainingFree,
+  });
+}
