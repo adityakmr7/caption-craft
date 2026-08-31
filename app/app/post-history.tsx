@@ -6,16 +6,24 @@ type Variation = { text: string; hashtags: string[] };
 type GenerationRow = {
   id: string;
   tone: string;
+  post_type: string | null;
   variations: Variation[];
   selected_variation: number | null;
   created_at: string;
+};
+
+const POST_TYPE_LABELS: Record<string, string> = {
+  milestone: "Milestone",
+  lesson: "Lesson",
+  contrarian: "Contrarian",
+  data: "Data",
 };
 
 export default async function PostHistory({ userId }: { userId: string }) {
   const supabase = await createClient();
   const { data: generations } = await supabase
     .from("generations")
-    .select("id, tone, variations, selected_variation, created_at")
+    .select("id, tone, post_type, variations, selected_variation, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(10)
@@ -45,7 +53,12 @@ export default async function PostHistory({ userId }: { userId: string }) {
                   year: "numeric",
                 })}
               </span>
-              <span className="cc-chip text-xs capitalize">{g.tone}</span>
+              <div className="flex items-center gap-1.5">
+                {g.post_type && POST_TYPE_LABELS[g.post_type] && (
+                  <span className="cc-chip text-xs">{POST_TYPE_LABELS[g.post_type]}</span>
+                )}
+                <span className="cc-chip text-xs capitalize">{g.tone}</span>
+              </div>
             </div>
 
             {selected && (

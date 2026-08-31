@@ -15,6 +15,9 @@ export const maxDuration = 60;
 const TONES = ["professional", "casual", "hype"] as const;
 type Tone = (typeof TONES)[number];
 
+const POST_TYPES = ["milestone", "lesson", "contrarian", "data"] as const;
+type PostType = (typeof POST_TYPES)[number];
+
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB, per PRD §7.1
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
@@ -30,7 +33,7 @@ const variationSchema = z.object({
         text: z
           .string()
           .describe(
-            "The LinkedIn post body, 150-220 words, hook-first (first 1-2 lines are what shows before 'see more')."
+            "The LinkedIn post body, 200-400 words, hook-first (first 1-2 lines are what shows before 'see more')."
           ),
         hashtags: z
           .array(z.string())
@@ -40,7 +43,7 @@ const variationSchema = z.object({
       })
     )
     .length(3)
-    .describe("Exactly 3 distinct post variations for the same screenshot and tone."),
+    .describe("Exactly 3 distinct post variations for the same screenshot, tone, and structure."),
 });
 
 const TONE_GUIDANCE: Record<Tone, string> = {
@@ -52,15 +55,26 @@ const TONE_GUIDANCE: Record<Tone, string> = {
     "Hype: high-energy, celebratory, confident. Still specific and factual — never vague hype for its own sake.",
 };
 
-const SYSTEM_PROMPT = `You write LinkedIn posts for Indian startup founders documenting their build-in-public journey. You read a screenshot the founder uploaded (a metric, a shipped feature, a payout notification, a milestone) and turn it into 3 distinct, specific LinkedIn post variations in the requested tone.
+const POST_TYPE_GUIDANCE: Record<PostType, string> = {
+  milestone:
+    "Milestone post. Structure: Hook (the number/moment itself) -> Context (what led here) -> Lesson (one thing you'd tell someone earlier in the journey) -> soft CTA (invite reaction, not a hard ask).",
+  lesson:
+    "Lesson post. Structure: Story (the specific failure or win, told briefly) -> Insight (the non-obvious thing you realized) -> Actionable takeaway (something the reader can actually apply, not a platitude).",
+  contrarian:
+    "Contrarian take. Structure: Hot take (a stance that pushes back on common startup wisdom) -> Evidence (why you believe it, grounded in what's in the screenshot) -> Alternative view (what you'd tell someone to do instead). Confident, not combative — never attack a person or company by name.",
+  data: "Data/framework post. Structure: Lead with the number or process shown in the screenshot -> Explanation (why it matters or how it happened) -> How to apply (a step the reader could try themselves).",
+};
+
+const SYSTEM_PROMPT = `You write LinkedIn posts for Indian startup founders documenting their build-in-public journey. You read a screenshot the founder uploaded (a metric, a shipped feature, a payout notification, a milestone) and turn it into 3 distinct, specific LinkedIn post variations in the requested tone and structure.
 
 Rules:
 - Ground every post in what is actually visible in the screenshot. Never invent numbers or facts not shown or stated.
-- Write like a founder talking, not an AI summarizing. No "In today's fast-paced world," no generic AI-wrapper phrasing.
+- Write like a founder talking, not an AI summarizing. No "In today's fast-paced world," no generic AI-wrapper phrasing, no "Excited to announce" / "Thrilled to share" openers.
 - Use Indian context by default: ₹ for currency, IST-appropriate references, Indian company/market context — never default to $ or US-centric examples unless the screenshot itself shows them.
 - Each of the 3 variations must take a genuinely different angle on the same underlying fact (e.g. the number itself, the story behind it, the lesson learned) — not just reworded sentences.
 - Hashtags come from a curated Indian-startup set such as #BuildInPublic, #StartupIndia, #SaaS, #IndianStartups, #Bootstrapped — pick 3-5 that actually fit, never generic or random tags.
-- Keep each post 150-220 words, hook-first: the first 1-2 lines must work as a standalone hook since that's what shows before "see more" on LinkedIn.`;
+- Keep each post 200-400 words, hook-first: the first 1-2 lines (roughly the first 210 characters) must work as a standalone hook with a specific detail or number, since that's what shows before "see more" on LinkedIn. Never a generic opener, and never a hook whose only job is bare engagement-bait ("Thoughts?").
+- Follow the requested post-type structure below for every variation.`;
 
 export async function POST(request: Request) {
   const user = await getUser();
@@ -75,6 +89,7 @@ export async function POST(request: Request) {
 
   const file = formData.get("screenshot");
   const toneInput = formData.get("tone");
+  const postTypeInput = formData.get("postType");
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Upload a screenshot." }, { status: 400 });
@@ -94,7 +109,11 @@ export async function POST(request: Request) {
   if (typeof toneInput !== "string" || !TONES.includes(toneInput as Tone)) {
     return NextResponse.json({ error: "Invalid tone." }, { status: 400 });
   }
+  if (typeof postTypeInput !== "string" || !POST_TYPES.includes(postTypeInput as PostType)) {
+    return NextResponse.json({ error: "Invalid post type." }, { status: 400 });
+  }
   const tone = toneInput as Tone;
+  const postType = postTypeInput as PostType;
 
   const supabase = await createClient();
 
@@ -115,6 +134,7 @@ export async function POST(request: Request) {
     }>();
 
   if (reservationError || !reservation || reservation.plan === null) {
+    console.error("reservation failed", reservationError);
     return NextResponse.json(
       { error: "Couldn't load your account. Try again." },
       { status: 500 }
@@ -148,7 +168,7 @@ export async function POST(request: Request) {
           content: [
             {
               type: "text",
-              text: `Tone: ${tone} — ${TONE_GUIDANCE[tone]}\n\nGenerate 3 LinkedIn post variations from this screenshot.`,
+              text: `Tone: ${tone} — ${TONE_GUIDANCE[tone]}\n\nStructure: ${POST_TYPE_GUIDANCE[postType]}\n\nGenerate 3 LinkedIn post variations from this screenshot.`,
             },
             { type: "file", mediaType: file.type, data: bytes },
           ],
@@ -194,6 +214,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       screenshot_path: screenshotPath,
       tone,
+      post_type: postType,
       variations: output.variations,
     })
     .select("id, created_at")
@@ -214,6 +235,7 @@ export async function POST(request: Request) {
     id: generation.id,
     createdAt: generation.created_at,
     tone,
+    postType,
     variations: output.variations,
     remainingFree,
   });
