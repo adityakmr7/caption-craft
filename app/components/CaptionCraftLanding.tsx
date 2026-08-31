@@ -1,27 +1,18 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  AnimatePresence,
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
-import {
+  ArrowDown,
   ArrowRight,
-  AudioLines,
   Check,
   CheckCircle2,
-  Download,
-  Layers,
+  ClipboardCheck,
+  Hash,
+  History,
+  ImagePlus,
   Menu,
-  Palette,
-  Play,
-  Sparkles,
-  Star,
-  Type,
+  SlidersHorizontal,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -42,10 +33,10 @@ function Reveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.6, ease: EASE }}
+      transition={{ duration: 0.5, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -66,10 +57,10 @@ function RevealItem({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.6, delay: index * 0.1, ease: EASE }}
+      transition={{ duration: 0.5, delay: index * 0.08, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -90,63 +81,24 @@ function HeroReveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay, ease: EASE }}
+      transition={{ duration: 0.5, delay, ease: EASE }}
     >
       {children}
     </motion.div>
   );
 }
 
-/* ---------- background dressing ---------- */
+/* ---------- shared bits ---------- */
 
-function pseudoRandom(seed: number) {
-  const x = Math.sin(seed * 999) * 10000;
-  return x - Math.floor(x);
-}
-
-const PARTICLES = Array.from({ length: 20 }, (_, i) => {
-  const r1 = pseudoRandom(i + 1);
-  const r2 = pseudoRandom(i + 51);
-  const r3 = pseudoRandom(i + 101);
-  const r4 = pseudoRandom(i + 151);
-  return {
-    left: `${(r1 * 100).toFixed(2)}%`,
-    top: `${(r2 * 100).toFixed(2)}%`,
-    size: 2 + Math.round(r3 * 3),
-    duration: Number((3 + r4 * 4).toFixed(2)),
-    delay: Number((r1 * 5).toFixed(2)),
-  };
-});
-
-function FloatingParticles() {
+function BrandMark({ size = "h-8 w-8" }: { size?: string }) {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {PARTICLES.map((p, i) => (
-        <span
-          key={i}
-          className="particle"
-          style={{
-            left: p.left,
-            top: p.top,
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            animationDuration: `${p.duration}s`,
-            animationDelay: `${p.delay}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function GradientOrbs() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="orb w-[500px] h-[500px] -top-40 -left-40 bg-[#a855f7] opacity-[0.12]" />
-      <div className="orb w-[600px] h-[600px] top-1/3 -right-52 bg-[#ec4899] opacity-[0.1]" />
-    </div>
+    <span
+      className={`flex ${size} shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]`}
+    >
+      <ImagePlus className="h-4 w-4 text-[#171310]" strokeWidth={2.2} />
+    </span>
   );
 }
 
@@ -154,43 +106,30 @@ function GradientOrbs() {
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
-  { label: "How it works", href: "#how-it-works" },
+  { label: "How it works", href: "#how" },
   { label: "Pricing", href: "#pricing" },
+  { label: "Why we built this", href: "#founder" },
 ];
 
 function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { scrollY } = useScroll();
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 20);
-  });
 
   return (
-    <header
-      className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${
-        scrolled
-          ? "backdrop-blur-xl bg-[#0a0a0f]/70 border-b border-white/[0.08]"
-          : "bg-transparent border-b border-transparent"
-      }`}
-    >
+    <header className="fixed top-0 inset-x-0 z-50 border-b border-[var(--border-soft)] bg-[var(--bg)]/85 backdrop-blur-xl">
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         <a href="#" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#a855f7] to-[#ec4899]">
-            <Type className="h-4 w-4 text-white" strokeWidth={2} />
-          </span>
-          <span className="text-lg font-bold tracking-tight text-white">
-            Caption<span className="gradient-text">Craft</span>
+          <BrandMark />
+          <span className="text-[15px] font-bold tracking-tight text-[var(--text-1)]">
+            CaptionCraft
           </span>
         </a>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-7">
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="text-sm text-[#a1a1aa] hover:text-white transition-colors"
+              className="text-sm text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
             >
               {l.label}
             </a>
@@ -200,15 +139,15 @@ function Navbar() {
         <div className="hidden md:block">
           <a
             href="#waitlist"
-            className="btn-gradient inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
+            className="btn-primary inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
           >
-            Join Waitlist
+            Join waitlist
           </a>
         </div>
 
         <button
           type="button"
-          className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-white"
+          className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-1)]"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Toggle menu"
           aria-expanded={mobileOpen}
@@ -223,8 +162,8 @@ function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE }}
-            className="md:hidden overflow-hidden border-b border-white/[0.08] bg-[#0a0a0f]/95 backdrop-blur-xl"
+            transition={{ duration: 0.2, ease: EASE }}
+            className="md:hidden overflow-hidden border-b border-[var(--border-soft)] bg-[var(--bg)]"
           >
             <div className="px-6 py-4 flex flex-col gap-4">
               {NAV_LINKS.map((l) => (
@@ -232,7 +171,7 @@ function Navbar() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="text-sm text-[#a1a1aa] hover:text-white transition-colors"
+                  className="text-sm text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
                 >
                   {l.label}
                 </a>
@@ -240,9 +179,9 @@ function Navbar() {
               <a
                 href="#waitlist"
                 onClick={() => setMobileOpen(false)}
-                className="btn-gradient inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold"
+                className="btn-primary inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold"
               >
-                Join Waitlist
+                Join waitlist
               </a>
             </div>
           </motion.div>
@@ -254,155 +193,216 @@ function Navbar() {
 
 /* ---------- hero ---------- */
 
-const STATS = [
-  { value: "30 sec", label: "per video" },
-  { value: "6", label: "viral styles" },
-  { value: "99%", label: "accuracy" },
+const HERO_STATS = [
+  { value: "3", label: "variations per screenshot" },
+  { value: "<60s", label: "screenshot to copy-ready post" },
+  { value: "+104%", label: "YoY growth, Indian founders on LinkedIn" },
 ];
 
-function PhoneMockup() {
+function DemoCard() {
   return (
-    <div className="relative">
-      <div className="orb w-[420px] h-[420px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 bg-gradient-to-br from-[#a855f7] to-[#ec4899] opacity-20" />
-      <div className="relative w-[270px] sm:w-[310px] aspect-[9/16] rounded-[2.5rem] border border-white/10 bg-black/40 p-3 shadow-2xl">
-        <div className="relative h-full w-full overflow-hidden rounded-[2rem] bg-zinc-900">
-          <img
-            src="https://picsum.photos/seed/captioncraft-hero-reel/640/1138"
-            alt="Vertical video frame with an auto-generated caption overlay"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30" />
-          <div className="absolute top-4 left-4">
-            <span className="rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur">
-              Transcribing audio
-            </span>
-          </div>
-          <div className="absolute bottom-10 inset-x-4 text-center">
-            <p
-              className="text-2xl font-extrabold uppercase leading-tight text-white"
-              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}
-            >
-              this changes
-              <br />
-              <span className="gradient-text">everything</span>
-            </p>
+    <div className="cc-card p-4 flex flex-col gap-3.5">
+      <div className="rounded-[0.625rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="font-mono-cc text-[11px] text-[var(--text-3)]">
+            dashboard_aug.png
+          </span>
+          <span className="font-mono-cc text-[11px] text-[var(--text-3)]">
+            screenshot
+          </span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono-cc text-[22px] font-bold text-[var(--text-1)]">
+            ₹2,84,000
+          </span>
+          <span className="text-xs font-semibold text-[var(--success)]">↑ 18%</span>
+        </div>
+        <div className="text-xs text-[var(--text-3)]">MRR — August</div>
+        <div className="grid grid-cols-7 items-end gap-1.5 h-[70px] pt-2">
+          {[30, 42, 38, 55, 61, 74, 100].map((h, i) => (
+            <div
+              key={i}
+              className="rounded-t-[3px]"
+              style={{
+                height: `${h}%`,
+                background:
+                  i === 6
+                    ? "var(--accent)"
+                    : "color-mix(in srgb, var(--accent) 30%, transparent)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-center text-[var(--text-3)]">
+        <ArrowDown className="h-4 w-4" strokeWidth={2} />
+      </div>
+
+      <div className="flex gap-2">
+        {["Professional", "Casual", "Hype"].map((tone, i) => (
+          <span
+            key={tone}
+            className={`text-[11.5px] px-2.5 py-1 rounded-full border ${
+              i === 0
+                ? "border-[var(--accent)] text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)]"
+                : "border-[var(--border)] text-[var(--text-3)]"
+            }`}
+          >
+            {tone}
+          </span>
+        ))}
+      </div>
+
+      <div className="rounded-[0.625rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] text-[11px] font-bold">
+            AK
+          </span>
+          <div>
+            <div className="text-[13px] font-semibold text-[var(--text-1)]">
+              Aditya Kumar
+            </div>
+            <div className="text-[11px] text-[var(--text-3)]">
+              Founder, building in public
+            </div>
           </div>
         </div>
-        <div className="absolute top-3 left-1/2 h-5 w-24 -translate-x-1/2 rounded-full bg-black/60" />
+        <p className="text-[13.5px] leading-relaxed text-[var(--text-2)]">
+          Crossed ₹2.84L MRR this month — up 18% from July. The unlock wasn&apos;t a
+          new feature, it was finally pricing in INR instead of copying a US
+          SaaS&apos;s dollar tiers.
+        </p>
+        <div className="flex gap-1.5 flex-wrap">
+          <span className="cc-tag">#BuildInPublic</span>
+          <span className="cc-tag">#StartupIndia</span>
+          <span className="cc-tag">#SaaS</span>
+        </div>
       </div>
     </div>
   );
 }
 
 function Hero() {
-  const reduce = useReducedMotion();
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-  const y = useTransform(scrollYProgress, [0, 1], [0, 100]);
-
   return (
-    <section
-      ref={sectionRef}
-      className="relative min-h-[100dvh] overflow-hidden pt-24 pb-16 flex items-center"
-    >
-      <GradientOrbs />
-      <FloatingParticles />
-
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 w-full grid xl:grid-cols-[1.15fr_1fr] gap-12 items-center">
+    <section className="relative pt-28 pb-16">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
         <div>
-          <HeroReveal delay={0} className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-sm text-[#a1a1aa]">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-            Now in early access, 47 spots left
+          <HeroReveal
+            delay={0}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-1.5 text-sm text-[var(--text-2)]"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+            Built for Indian founders building in public
           </HeroReveal>
 
-          <HeroReveal delay={0.15}>
-            <h1 className="mb-6 text-3xl sm:text-4xl md:text-[2.65rem] font-bold tracking-tight leading-[1.2] text-white">
-              Upload your video. Get <span className="gradient-text">viral-ready captions</span> in 30 seconds.
+          <HeroReveal delay={0.12}>
+            <h1 className="mb-5 text-3xl sm:text-4xl md:text-[2.75rem] font-bold tracking-tight leading-[1.1] text-[var(--text-1)]">
+              You shipped it. Now{" "}
+              <span className="text-[var(--accent)]">post about it.</span>
             </h1>
           </HeroReveal>
 
-          <HeroReveal delay={0.3}>
-            <p className="mb-8 max-w-[46ch] text-lg leading-relaxed text-[#a1a1aa]">
-              Auto-generated, styled, and animated captions for TikTok, Reels and Shorts. No editing skills needed. Just upload and post.
+          <HeroReveal delay={0.24}>
+            <p className="mb-8 max-w-[48ch] text-lg leading-relaxed text-[var(--text-2)]">
+              Upload the screenshot you already have — a metric, a shipped
+              feature, a payout notification — and get 3 ready-to-post
+              LinkedIn variations with hashtags, in a voice that sounds like a
+              founder, not a wrapper around ChatGPT.
             </p>
           </HeroReveal>
 
-          <HeroReveal delay={0.45} className="mb-10 flex flex-col sm:flex-row gap-4">
+          <HeroReveal
+            delay={0.36}
+            className="mb-10 flex flex-col sm:flex-row gap-4"
+          >
             <a
               href="#waitlist"
-              className="btn-gradient inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold whitespace-nowrap"
+              className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold whitespace-nowrap"
             >
-              Join Waitlist - 50% Off Forever
+              Join the waitlist
+              <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
             </a>
-            <button
-              type="button"
+            <a
+              href="#how"
               className="btn-ghost inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold whitespace-nowrap"
             >
-              <Play className="h-4 w-4" strokeWidth={2} />
-              Watch demo
-            </button>
+              See how it works
+            </a>
           </HeroReveal>
 
-          <HeroReveal delay={0.6} className="flex flex-wrap items-center gap-6">
-            {STATS.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-6">
-                {i > 0 && <span className="hidden sm:block h-4 w-px bg-white/10" />}
-                <span className="text-sm text-[#71717a]">
-                  <span className="font-semibold text-white">{s.value}</span> {s.label}
-                </span>
+          <HeroReveal delay={0.48} className="flex flex-wrap gap-6">
+            {HERO_STATS.map((s) => (
+              <div key={s.label}>
+                <div className="font-mono-cc text-sm font-semibold text-[var(--text-1)]">
+                  {s.value}
+                </div>
+                <div className="text-xs text-[var(--text-3)] max-w-[20ch]">
+                  {s.label}
+                </div>
               </div>
             ))}
           </HeroReveal>
         </div>
 
-        <motion.div
-          style={reduce ? undefined : { y }}
-          className="relative flex justify-center xl:justify-end"
-        >
-          <PhoneMockup />
-        </motion.div>
+        <HeroReveal delay={0.2}>
+          <DemoCard />
+        </HeroReveal>
       </div>
     </section>
   );
 }
 
-/* ---------- logo cloud ---------- */
+/* ---------- community strip ---------- */
 
-const PLATFORMS = [
-  { name: "TikTok", slug: "tiktok" },
-  { name: "Instagram", slug: "instagram" },
-  { name: "YouTube", slug: "youtube" },
-  { name: "LinkedIn", slug: "linkedin" },
-  { name: "X", slug: "x" },
-  { name: "Snapchat", slug: "snapchat" },
-];
+const COMMUNITIES = ["SaaSBOOMi", "Peerlist", "Turbostart", "IndieHackers India"];
 
-function LogoCloud() {
+function CommunityStrip() {
   return (
-    <section className="border-y border-white/5 py-16">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-10">
-          <p className="text-center text-xs uppercase tracking-[0.2em] text-[#71717a]">
-            Works with every platform
-          </p>
-        </Reveal>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
-          {PLATFORMS.map((p, i) => (
-            <RevealItem key={p.slug} index={i}>
-              <img
-                src={`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${p.slug}.svg`}
-                alt={p.name}
-                className="h-6 sm:h-7 w-auto opacity-40 brightness-0 invert transition-opacity duration-300 hover:opacity-90"
-              />
-            </RevealItem>
+    <section className="border-y border-[var(--border-soft)] py-7">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center gap-6 flex-wrap">
+        <span className="text-[11.5px] uppercase tracking-[0.14em] text-[var(--text-3)] shrink-0">
+          Made for the founders in
+        </span>
+        <div className="flex gap-2.5 flex-wrap">
+          {COMMUNITIES.map((c) => (
+            <span key={c} className="cc-chip">
+              {c}
+            </span>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- problem / solution ---------- */
+
+function ProblemSolution() {
+  return (
+    <section className="py-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 grid md:grid-cols-2 gap-6">
+        <Reveal className="cc-card p-7 flex flex-col gap-3.5">
+          <span className="text-[13px] font-semibold text-[var(--text-3)]">
+            THE BLANK CURSOR PROBLEM
+          </span>
+          <p className="text-[15px] leading-relaxed text-[var(--text-2)]">
+            You just crossed a milestone — new MRR, a shipped feature, a
+            cohort acceptance. You know you should post about it. Then the
+            cursor blinks for twenty minutes and you close the tab instead.
+          </p>
+        </Reveal>
+        <Reveal className="cc-card p-7 flex flex-col gap-3.5 border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-[color-mix(in_srgb,var(--accent)_7%,var(--bg-elevated))]">
+          <span className="text-[13px] font-semibold text-[var(--accent)]">
+            WHAT CAPTIONCRAFT DOES INSTEAD
+          </span>
+          <p className="text-[15px] leading-relaxed text-[var(--text-1)]">
+            Upload the screenshot you already have open. Pick a tone. Get
+            three posts that sound like you talking, not an AI&apos;s idea of a
+            founder — with hashtags an Indian startup audience actually
+            follows.
+          </p>
+        </Reveal>
       </div>
     </section>
   );
@@ -413,48 +413,56 @@ function LogoCloud() {
 const STEPS = [
   {
     n: "01",
-    title: "Upload your video",
-    body: "Drop any video up to 100MB. MP4, MOV and WebM are all supported.",
+    title: "Upload the screenshot",
+    body: "Drop a screenshot of your dashboard, your Razorpay payout, your shipped UI — whatever actually proves the milestone.",
     icon: UploadCloud,
   },
   {
     n: "02",
-    title: "Pick your style",
-    body: "Choose from 6 viral-tested caption styles. One click for the perfect look.",
-    icon: Palette,
+    title: "Pick a tone",
+    body: "Professional, casual, or hype. Same facts, three different voices — pick the one that sounds like you today.",
+    icon: SlidersHorizontal,
   },
   {
     n: "03",
-    title: "Download and post",
-    body: "AI transcribes, styles, and burns in the captions. Download ready for 9:16.",
-    icon: Download,
+    title: "Copy and post",
+    body: "Get 3 variations with hashtags picked for Indian startup audiences. Copy the one that sounds right and post it yourself.",
+    icon: ClipboardCheck,
   },
 ];
 
 function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24">
+    <section id="how" className="py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-16 max-w-2xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#a855f7]">
+        <Reveal className="mb-14 max-w-2xl">
+          <p className="mb-3.5 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
             How it works
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-white">
-            From raw video to <span className="gradient-text">viral clip</span> in 3 steps
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-[var(--text-1)]">
+            Screenshot in. Post out. Three steps.
           </h2>
         </Reveal>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {STEPS.map((step, i) => (
-            <RevealItem key={step.n} index={i} className="glass-card relative overflow-hidden p-8">
-              <span className="pointer-events-none absolute -top-4 -right-2 select-none text-8xl font-black text-white/[0.04]">
+            <RevealItem
+              key={step.n}
+              index={i}
+              className="cc-card p-7 flex flex-col gap-3.5"
+            >
+              <span className="font-mono-cc text-[13px] text-[var(--accent)]">
                 {step.n}
               </span>
-              <div className="relative mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#a855f7] to-[#ec4899]">
-                <step.icon className="h-5 w-5 text-white" strokeWidth={2} />
+              <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+                <step.icon className="h-4 w-4" strokeWidth={2.1} />
               </div>
-              <h3 className="relative mb-3 text-xl font-bold text-white">{step.title}</h3>
-              <p className="relative leading-relaxed text-[#a1a1aa]">{step.body}</p>
+              <h3 className="text-[16.5px] font-semibold text-[var(--text-1)]">
+                {step.title}
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--text-2)]">
+                {step.body}
+              </p>
             </RevealItem>
           ))}
         </div>
@@ -465,205 +473,93 @@ function HowItWorks() {
 
 /* ---------- features (bento) ---------- */
 
-const FEATURES = [
-  {
-    title: "AI Transcription",
-    body: "Whisper-powered accuracy across accents and slang, so nothing gets lost in translation.",
-    icon: AudioLines,
-    color: "from-[#a855f7] to-[#ec4899]",
-    tint: "bg-purple-500/[0.06]",
-    span: "md:col-span-2",
-  },
-  {
-    title: "6 Viral Styles",
-    body: "Tested on real viral videos, not guesswork.",
-    icon: Palette,
-    color: "from-[#ec4899] to-[#f472b6]",
-    tint: "bg-pink-500/[0.06]",
-    span: "",
-  },
-  {
-    title: "Word-by-Word Animation",
-    body: "Captions pop in sync with speech. Creators see a 40% boost in watch time.",
-    icon: Sparkles,
-    color: "from-[#3b82f6] to-[#60a5fa]",
-    tint: "bg-blue-500/[0.06]",
-    span: "",
-  },
-  {
-    title: "Bulk Processing",
-    body: "Queue up 10 videos at once and let CaptionCraft handle the rest.",
-    icon: Layers,
-    color: "from-[#f59e0b] to-[#fbbf24]",
-    tint: "bg-amber-500/[0.06]",
-    span: "md:col-span-2",
-  },
-];
-
 function Features() {
   return (
-    <section id="features" className="py-24">
+    <section id="features" className="py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-16 max-w-2xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#a855f7]">
+        <Reveal className="mb-14 max-w-2xl">
+          <p className="mb-3.5 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
             Features
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-white">
-            Everything you need to go viral
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-[var(--text-1)]">
+            The only LinkedIn tool that starts from a screenshot
           </h2>
         </Reveal>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <RevealItem
-              key={f.title}
-              index={i}
-              className={`glass-card relative p-8 ${f.tint} ${f.span}`}
-            >
-              <div className={`mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${f.color}`}>
-                <f.icon className="h-5 w-5 text-white" strokeWidth={2} />
-              </div>
-              <h3 className="mb-3 text-xl font-bold text-white">{f.title}</h3>
-              <p className="max-w-[42ch] leading-relaxed text-[#a1a1aa]">{f.body}</p>
-            </RevealItem>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+        <div className="grid gap-5 md:grid-cols-6">
+          <RevealItem
+            index={0}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-4"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+              <ImagePlus className="h-4 w-4" strokeWidth={2.1} />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-1)]">
+              Screenshot-first generation
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--text-2)] max-w-[44ch]">
+              Every other LinkedIn tool starts with a blank prompt or a topic
+              idea. We start with the thing you already have open — the
+              metric, the merge, the milestone — so the post is specific, not
+              generic.
+            </p>
+          </RevealItem>
 
-/* ---------- style showcase ---------- */
+          <RevealItem
+            index={1}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-2"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+              <SlidersHorizontal className="h-4 w-4" strokeWidth={2.1} />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-1)]">
+              3 tones, same facts
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--text-2)]">
+              Professional, casual, hype — never rewrites the truth, just the
+              voice.
+            </p>
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {["Professional", "Casual", "Hype"].map((t) => (
+                <span key={t} className="cc-chip text-xs">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </RevealItem>
 
-const STYLES = [
-  {
-    name: "Bold",
-    seed: "captioncraft-style-bold",
-    captionClass:
-      "text-3xl font-black uppercase text-white [text-shadow:_3px_3px_0_rgba(0,0,0,0.9)]",
-    sample: "STOP SCROLLING",
-  },
-  {
-    name: "Neon",
-    seed: "captioncraft-style-neon",
-    captionClass:
-      "text-3xl font-extrabold text-[#f472b6] [text-shadow:_0_0_18px_rgba(236,72,153,0.9),_0_0_36px_rgba(168,85,247,0.6)]",
-    sample: "glow different",
-  },
-  {
-    name: "Retro",
-    seed: "captioncraft-style-retro",
-    captionClass:
-      "text-2xl font-extrabold uppercase tracking-wide text-[#fbbf24] italic pb-1 [text-shadow:_2px_2px_0_rgba(0,0,0,0.9)]",
-    sample: "rewind this",
-  },
-  {
-    name: "Cinematic",
-    seed: "captioncraft-style-cinematic",
-    captionClass:
-      "text-lg font-medium tracking-wide text-white [text-shadow:_0_2px_10px_rgba(0,0,0,0.9)]",
-    sample: "the story continues",
-  },
-];
+          <RevealItem
+            index={2}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-3"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+              <Hash className="h-4 w-4" strokeWidth={2.1} />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-1)]">
+              Hashtags that aren&apos;t guesses
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--text-2)]">
+              Pulled from a curated set built for Indian startup audiences —
+              #BuildInPublic, #StartupIndia, #SaaS — not whatever the model
+              picks at random.
+            </p>
+          </RevealItem>
 
-function StyleShowcase() {
-  return (
-    <section className="py-24">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-16 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-white">
-            Pick a style. <span className="gradient-text">Go viral.</span>
-          </h2>
-        </Reveal>
-
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-          {STYLES.map((s, i) => (
-            <RevealItem
-              key={s.name}
-              index={i}
-              className="glass-card relative aspect-[9/16] overflow-hidden p-0"
-            >
-              <img
-                src={`https://picsum.photos/seed/${s.seed}/360/640`}
-                alt={`${s.name} caption style example`}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/40" />
-              <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 text-center">
-                <p className={s.captionClass}>{s.sample}</p>
-              </div>
-              <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-black/30 p-4 backdrop-blur-sm">
-                <p className="text-sm font-semibold text-white">{s.name}</p>
-              </div>
-            </RevealItem>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- testimonials ---------- */
-
-const TESTIMONIALS = [
-  {
-    quote:
-      "I used to spend two hours a week captioning clips by hand. Now it takes thirty seconds and looks intentional.",
-    name: "Maya Odutola",
-    role: "Content Creator, 340K on TikTok",
-    initials: "MO",
-  },
-  {
-    quote:
-      "The word-by-word animation alone lifted our average watch time. My editor needed the retention graph to believe it.",
-    name: "Jordan Ashcroft",
-    role: "Video Editor and Consultant",
-    initials: "JA",
-  },
-  {
-    quote:
-      "We run six client accounts. Bulk processing is the reason CaptionCraft stayed in our workflow instead of a bookmark.",
-    name: "Lina Torres",
-    role: "Founder, ClipHouse Media",
-    initials: "LT",
-  },
-];
-
-function Testimonials() {
-  return (
-    <section className="py-24">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-16 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-white">
-            Loved by creators
-          </h2>
-        </Reveal>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((t, i) => (
-            <RevealItem key={t.name} index={i} className="glass-card flex flex-col p-8">
-              <div className="mb-5 flex gap-1">
-                {Array.from({ length: 5 }).map((_, starIndex) => (
-                  <Star
-                    key={starIndex}
-                    className="h-4 w-4 fill-[#fbbf24] text-[#fbbf24]"
-                  />
-                ))}
-              </div>
-              <p className="mb-6 flex-1 leading-relaxed text-[#a1a1aa]">
-                &ldquo;{t.quote}&rdquo;
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#a855f7] to-[#ec4899] text-sm font-bold text-white">
-                  {t.initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">{t.name}</p>
-                  <p className="text-xs text-[#71717a]">{t.role}</p>
-                </div>
-              </div>
-            </RevealItem>
-          ))}
+          <RevealItem
+            index={3}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-3"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+              <History className="h-4 w-4" strokeWidth={2.1} />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-1)]">
+              Every post, saved
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--text-2)]">
+              Every generation lands in your history — reopen, re-copy, or
+              repurpose it later without regenerating from scratch.
+            </p>
+          </RevealItem>
         </div>
       </div>
     </section>
@@ -674,85 +570,171 @@ function Testimonials() {
 
 const PLANS = [
   {
-    name: "Starter",
-    price: "$15",
-    period: "/mo",
-    features: ["20 videos per month", "3 caption styles", "720p export", "Basic animation"],
-    popular: false,
-  },
-  {
-    name: "Pro",
-    price: "$29",
-    period: "/mo",
+    name: "Monthly",
+    price: "₹299",
+    period: "/ month",
+    highlight: false,
     features: [
-      "100 videos per month",
-      "All 6 caption styles",
-      "1080p export",
-      "Word-by-word animation",
-      "Bulk processing",
-      "Priority support",
+      "3 free generations to start, no card",
+      "3 post variations per screenshot",
+      "Post history + hashtag suggestions",
+      "UPI AutoPay, cancel anytime",
     ],
-    popular: true,
   },
   {
-    name: "Business",
-    price: "$79",
-    period: "/mo",
-    features: ["Unlimited videos", "Team seats", "API access", "White-label export"],
-    popular: false,
+    name: "Yearly",
+    price: "₹2,999",
+    period: "/ year",
+    highlight: true,
+    badge: "2 months free",
+    features: [
+      "Everything in Monthly",
+      "Works out to ~₹250/month",
+      "Locked-in launch pricing",
+    ],
   },
 ];
 
 function Pricing() {
   return (
-    <section id="pricing" className="py-24">
+    <section id="pricing" className="py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="mb-16 max-w-2xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#a855f7]">
+        <Reveal className="mb-14 max-w-2xl mx-auto text-center">
+          <p className="mb-3.5 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
             Pricing
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-white">
-            Simple pricing, no surprises
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-[var(--text-1)]">
+            Priced for bootstrapped, not funded
           </h2>
         </Reveal>
 
-        <div className="grid items-start gap-6 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 max-w-2xl mx-auto">
           {PLANS.map((p, i) => (
             <RevealItem
               key={p.name}
               index={i}
-              className={`glass-card relative p-8 ${
-                p.popular
-                  ? "border-[#a855f7]/40 bg-gradient-to-b from-[#a855f7]/[0.07] to-transparent"
+              className={`cc-card relative p-7 flex flex-col gap-5 ${
+                p.highlight
+                  ? "border-[var(--accent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_60%)]"
                   : ""
               }`}
             >
-              {p.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] px-4 py-1 text-xs font-bold uppercase tracking-wide text-white">
-                  Most Popular
+              {p.badge && (
+                <span className="absolute -top-3 right-6 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[11px] font-bold text-[#171310]">
+                  {p.badge}
                 </span>
               )}
-              <h3 className="mb-1 text-lg font-semibold text-white">{p.name}</h3>
-              <div className="mb-6 flex items-end gap-1">
-                <span className="text-4xl font-bold tracking-tight text-white">{p.price}</span>
-                <span className="mb-1 text-[#71717a]">{p.period}</span>
+              <p className="text-sm font-semibold text-[var(--text-2)]">
+                {p.name}
+              </p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono-cc text-[34px] font-bold tracking-tight text-[var(--text-1)]">
+                  {p.price}
+                </span>
+                <span className="text-sm text-[var(--text-3)]">{p.period}</span>
               </div>
-              <ul className="mb-8 space-y-3">
+              <ul className="flex flex-col gap-2.5">
                 {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-[#a1a1aa]">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#a855f7]" strokeWidth={2.5} />
+                  <li
+                    key={f}
+                    className="flex items-start gap-2.5 text-sm text-[var(--text-2)]"
+                  >
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]"
+                      strokeWidth={2.5}
+                    />
                     {f}
                   </li>
                 ))}
               </ul>
               <a
                 href="#waitlist"
-                className={`inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold whitespace-nowrap ${
-                  p.popular ? "btn-gradient" : "btn-ghost"
+                className={`inline-flex items-center justify-center px-5 py-3 text-sm font-semibold whitespace-nowrap ${
+                  p.highlight ? "btn-primary" : "btn-ghost"
                 }`}
               >
-                Join Waitlist
+                Join waitlist for early access
               </a>
+            </RevealItem>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- founder note ---------- */
+
+function FounderNote() {
+  return (
+    <section id="founder" className="py-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <Reveal className="cc-card p-9 md:p-10 flex gap-6 items-start">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] font-bold text-sm">
+            AK
+          </span>
+          <div>
+            <p className="text-[17px] leading-relaxed text-[var(--text-1)] max-w-[62ch] mb-3">
+              &ldquo;I&apos;m building CaptionCraft in public — using it
+              myself to write the post about building it. If it saves you the
+              twenty minutes of cursor-blink before you close the tab instead
+              of posting, it&apos;s done its job.&rdquo;
+            </p>
+            <span className="text-sm text-[var(--text-3)]">
+              Aditya Kumar, solo founder
+            </span>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- faq ---------- */
+
+const FAQS = [
+  {
+    q: "Does this post to LinkedIn for me?",
+    a: "Not yet. You copy the variation you like and post it yourself — full control, no API risk.",
+  },
+  {
+    q: "What if I don't have a screenshot?",
+    a: "You can start from a quick idea too, but screenshots get you the most specific, believable posts — that's the whole point.",
+  },
+  {
+    q: "Is my screenshot used to train anything?",
+    a: "No. Your uploads stay private to your account and are never used for model training.",
+  },
+  {
+    q: "Why is this cheaper than Taplio or Supergrow?",
+    a: "Because it's priced for a bootstrapped Indian founder, not a funded US marketing team.",
+  },
+];
+
+function FAQ() {
+  return (
+    <section className="py-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <Reveal className="mb-14 max-w-2xl">
+          <p className="mb-3.5 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
+            FAQ
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-[var(--text-1)]">
+            Before you ask
+          </h2>
+        </Reveal>
+
+        <div className="flex flex-col gap-3 max-w-2xl">
+          {FAQS.map((f, i) => (
+            <RevealItem
+              key={f.q}
+              index={i}
+              className="cc-card px-6 py-5"
+            >
+              <p className="text-[15px] font-semibold text-[var(--text-1)] mb-2">
+                {f.q}
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--text-2)]">{f.a}</p>
             </RevealItem>
           ))}
         </div>
@@ -765,7 +747,9 @@ function Pricing() {
 
 function WaitlistCTA() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">(
+    "idle",
+  );
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -797,15 +781,15 @@ function WaitlistCTA() {
   };
 
   return (
-    <section id="waitlist" className="py-24">
+    <section id="waitlist" className="py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <Reveal className="glass-card relative mx-auto max-w-3xl overflow-hidden p-10 text-center md:p-16">
-          <div className="orb absolute left-1/2 top-1/2 -z-10 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-[#a855f7] to-[#ec4899] opacity-10" />
-          <h2 className="mb-4 text-3xl md:text-4xl font-bold tracking-tight text-white">
-            Be among the first 100 creators
+        <Reveal className="cc-card mx-auto max-w-3xl p-10 text-center md:p-16">
+          <h2 className="mb-4 text-3xl md:text-4xl font-bold tracking-tight text-[var(--text-1)]">
+            Your next milestone deserves more than a blank cursor.
           </h2>
-          <p className="mx-auto mb-8 max-w-[50ch] text-[#a1a1aa]">
-            Join the waitlist today and get 50% off forever. No credit card required.
+          <p className="mx-auto mb-8 max-w-[50ch] text-[var(--text-2)]">
+            Join the waitlist for early access. No spam, just a note when we
+            launch — this September.
           </p>
 
           <div className="mx-auto mb-6 min-h-[52px] max-w-md">
@@ -829,24 +813,29 @@ function WaitlistCTA() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       aria-invalid={status === "error"}
-                      aria-describedby={status === "error" ? "waitlist-email-error" : undefined}
-                      className={`flex-1 rounded-xl border bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-[#71717a] focus:outline-none focus:ring-2 ${
+                      aria-describedby={
+                        status === "error" ? "waitlist-email-error" : undefined
+                      }
+                      className={`flex-1 rounded-[0.625rem] border bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 ${
                         status === "error"
                           ? "border-red-400/40 focus:border-red-400/50 focus:ring-red-400/40"
-                          : "border-white/10 focus:border-[#a855f7]/40 focus:ring-[#a855f7]/50"
+                          : "border-[var(--border)] focus:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] focus:ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
                       }`}
                     />
                     <button
                       type="submit"
                       disabled={status === "submitting"}
-                      className="btn-gradient inline-flex items-center justify-center gap-2 whitespace-nowrap px-6 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap px-6 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {status === "submitting" ? "Joining..." : "Join Waitlist"}
+                      {status === "submitting" ? "Joining..." : "Join waitlist"}
                       <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                     </button>
                   </div>
                   {status === "error" && (
-                    <p id="waitlist-email-error" className="mt-2 text-left text-sm text-red-400">
+                    <p
+                      id="waitlist-email-error"
+                      className="mt-2 text-left text-sm text-red-400"
+                    >
                       {errorMessage}
                     </p>
                   )}
@@ -856,7 +845,7 @@ function WaitlistCTA() {
                   key="success"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-center gap-2 font-medium text-emerald-400"
+                  className="flex items-center justify-center gap-2 font-medium text-[var(--success)]"
                 >
                   <CheckCircle2 className="h-5 w-5" strokeWidth={2.5} />
                   You&apos;re on the list!
@@ -864,10 +853,6 @@ function WaitlistCTA() {
               )}
             </AnimatePresence>
           </div>
-
-          <p className="text-xs text-[#71717a]">
-            Join 200+ creators already on the list. Launching Q3 2026.
-          </p>
         </Reveal>
       </div>
     </section>
@@ -878,40 +863,27 @@ function WaitlistCTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 py-12">
-      <div className="max-w-7xl mx-auto flex flex-col items-center justify-between gap-6 px-6 lg:px-8 md:flex-row">
+    <footer className="border-t border-[var(--border-soft)] py-10">
+      <div className="max-w-7xl mx-auto flex flex-col items-center justify-between gap-5 px-6 lg:px-8 md:flex-row">
         <a href="#" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#a855f7] to-[#ec4899]">
-            <Type className="h-4 w-4 text-white" strokeWidth={2} />
-          </span>
-          <span className="text-sm font-bold tracking-tight text-white">
-            Caption<span className="gradient-text">Craft</span>
+          <BrandMark size="h-7 w-7" />
+          <span className="text-sm font-bold tracking-tight text-[var(--text-1)]">
+            CaptionCraft
           </span>
         </a>
 
-        <div className="flex items-center gap-6 text-sm text-[#71717a]">
-          <a href="/privacy" className="transition-colors hover:text-white">
+        <div className="flex items-center gap-6 text-sm text-[var(--text-3)]">
+          <a href="/privacy" className="transition-colors hover:text-[var(--text-1)]">
             Privacy
           </a>
-          <a href="/terms" className="transition-colors hover:text-white">
+          <a href="/terms" className="transition-colors hover:text-[var(--text-1)]">
             Terms
-          </a>
-          <a
-            href="https://x.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 transition-colors hover:text-white"
-          >
-            <img
-              src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/x.svg"
-              alt=""
-              className="h-3.5 w-3.5 brightness-0 invert opacity-60"
-            />
-            Twitter
           </a>
         </div>
 
-        <p className="text-sm text-[#71717a]">&copy; 2026 CaptionCraft. Built for creators.</p>
+        <p className="text-sm text-[var(--text-3)]">
+          Built in India, for founders building in public.
+        </p>
       </div>
     </footer>
   );
@@ -921,16 +893,17 @@ function Footer() {
 
 export default function CaptionCraftLanding() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#0a0a0f] text-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-[var(--bg)] text-[var(--text-1)]">
       <Navbar />
       <main>
         <Hero />
-        <LogoCloud />
+        <CommunityStrip />
+        <ProblemSolution />
         <HowItWorks />
         <Features />
-        <StyleShowcase />
-        <Testimonials />
         <Pricing />
+        <FounderNote />
+        <FAQ />
         <WaitlistCTA />
       </main>
       <Footer />

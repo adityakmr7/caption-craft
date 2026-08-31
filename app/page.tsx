@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import CaptionCraftLanding from "./components/CaptionCraftLanding";
 
-const title = "CaptionCraft — Viral-Ready Captions in 30 Seconds";
+const title = "CaptionCraft — Screenshot in, LinkedIn post out";
 const description =
-  "Upload your video and get auto-generated, styled captions for TikTok, Reels and Shorts. No editing skills needed. Join the waitlist for 50% off forever.";
+  "Upload a screenshot of your milestone and get 3 ready-to-post LinkedIn variations with hashtags, written for Indian founders building in public.";
 
 export const metadata: Metadata = {
   title,
