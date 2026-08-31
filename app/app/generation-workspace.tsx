@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent } from "react";
-import { Check, Copy, ImagePlus, Loader2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { Check, Clock, Copy, ImagePlus, Loader2, TriangleAlert, X } from "lucide-react";
+import { analyzeHook, analyzeReadability } from "./text-analysis";
 
 type Tone = "professional" | "casual" | "hype";
+type PostType = "milestone" | "lesson" | "contrarian" | "data";
 
 type Variation = {
   text: string;
@@ -14,15 +16,29 @@ type GenerateResponse = {
   id: string;
   createdAt: string;
   tone: Tone;
+  postType: PostType;
   variations: Variation[];
   remainingFree: number | null;
 };
+
+const POST_TYPES: { value: PostType; label: string; description: string }[] = [
+  { value: "milestone", label: "Milestone", description: "Revenue, users, funding, launches" },
+  { value: "lesson", label: "Lesson", description: "What you learned from a failure or win" },
+  { value: "contrarian", label: "Contrarian", description: "Challenge a common startup belief" },
+  { value: "data", label: "Data / Framework", description: "Share a number or process" },
+];
 
 const TONES: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
   { value: "casual", label: "Casual" },
   { value: "hype", label: "Hype" },
 ];
+
+const READABILITY_COLOR: Record<string, string> = {
+  short: "bg-yellow-400",
+  good: "bg-[var(--success)]",
+  long: "bg-red-400",
+};
 
 function AutoGrowTextarea({
   value,
@@ -68,6 +84,9 @@ function VariationCard({
   const [hashtags, setHashtags] = useState(variation.hashtags);
   const [justCopied, setJustCopied] = useState(false);
 
+  const readability = useMemo(() => analyzeReadability(text), [text]);
+  const hookIssues = useMemo(() => analyzeHook(text), [text]);
+
   const handleUseThis = async () => {
     const full = `${text}\n\n${hashtags.join(" ")}`;
     try {
@@ -99,6 +118,20 @@ function VariationCard({
       </div>
 
       <AutoGrowTextarea value={text} onChange={setText} />
+
+      <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
+        <span className={`h-1.5 w-1.5 rounded-full ${READABILITY_COLOR[readability.level]}`} />
+        <span className="font-mono-cc">{readability.wordCount} words</span>
+        <span>·</span>
+        <span>{readability.label}</span>
+      </div>
+
+      {hookIssues.length > 0 && (
+        <div className="flex items-start gap-2 rounded-[0.5rem] border border-yellow-400/25 bg-yellow-400/[0.06] px-3 py-2.5">
+          <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-yellow-400" strokeWidth={2} />
+          <p className="text-xs leading-relaxed text-[var(--text-2)]">{hookIssues[0]}</p>
+        </div>
+      )}
 
       <div className="flex gap-1.5 flex-wrap">
         {hashtags.map((tag) => (
@@ -150,6 +183,7 @@ export default function GenerationWorkspace({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [postType, setPostType] = useState<PostType>("milestone");
   const [tone, setTone] = useState<Tone>("professional");
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<"idle" | "generating" | "error">("idle");
@@ -193,6 +227,7 @@ export default function GenerationWorkspace({
     const formData = new FormData();
     formData.append("screenshot", file);
     formData.append("tone", tone);
+    formData.append("postType", postType);
 
     try {
       const res = await fetch("/api/generate", { method: "POST", body: formData });
@@ -290,21 +325,58 @@ export default function GenerationWorkspace({
             )}
           </div>
 
-          <div className="flex gap-2">
-            {TONES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setTone(t.value)}
-                className={`text-sm px-3.5 py-2 rounded-full border transition-colors ${
-                  tone === t.value
-                    ? "border-[var(--accent)] text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)]"
-                    : "border-[var(--border)] text-[var(--text-3)]"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div>
+            <p className="text-xs font-semibold text-[var(--text-3)] mb-2">Post type</p>
+            <div className="grid grid-cols-2 gap-2">
+              {POST_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setPostType(t.value)}
+                  className={`text-left px-3.5 py-2.5 rounded-[0.625rem] border transition-colors ${
+                    postType === t.value
+                      ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)]"
+                      : "border-[var(--border)]"
+                  }`}
+                >
+                  <span
+                    className={`block text-sm font-semibold ${
+                      postType === t.value ? "text-[var(--accent)]" : "text-[var(--text-1)]"
+                    }`}
+                  >
+                    {t.label}
+                  </span>
+                  <span className="block text-xs text-[var(--text-3)] mt-0.5">
+                    {t.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-[var(--text-3)] mb-2">Tone</p>
+            <div className="flex gap-2">
+              {TONES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setTone(t.value)}
+                  className={`text-sm px-3.5 py-2 rounded-full border transition-colors ${
+                    tone === t.value
+                      ? "border-[var(--accent)] text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)]"
+                      : "border-[var(--border)] text-[var(--text-3)]"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
+            <Clock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+            Best time to post (India, 2026): Tue–Thu, 9 AM–5 PM IST
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
