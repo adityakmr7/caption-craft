@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "CaptionCraft — Viral-Ready Captions in 30 Seconds",
+  title: "CaptionCraft — Screenshot in, LinkedIn post out",
   description:
-    "Upload your video and get auto-generated, styled captions for TikTok, Reels and Shorts. No editing skills needed. Join the waitlist for 50% off forever.",
+    "Upload a screenshot of your milestone and get 3 ready-to-post LinkedIn variations with hashtags, written for Indian founders building in public.",
 };
 
 export default function RootLayout({
@@ -20,8 +26,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#0a0a0f]">
+    <html
+      lang="en"
+      className={`${instrumentSans.variable} ${jetbrainsMono.variable} dark h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-[#131211]">
         {children}
       </body>
     </html>
