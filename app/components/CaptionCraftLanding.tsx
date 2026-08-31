@@ -136,7 +136,13 @@ function Navbar() {
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-5">
+          <a
+            href="/login"
+            className="text-sm text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
+          >
+            Log in
+          </a>
           <a
             href="#waitlist"
             className="btn-primary inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
@@ -176,6 +182,13 @@ function Navbar() {
                   {l.label}
                 </a>
               ))}
+              <a
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="text-sm text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
+              >
+                Log in
+              </a>
               <a
                 href="#waitlist"
                 onClick={() => setMobileOpen(false)}
