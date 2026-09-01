@@ -1,8 +1,8 @@
 # Roadmap
 
-**Last updated:** 2026-08-31
+**Last updated:** 2026-09-01
 
-Phases are scoped by outcome, not just time — don't start the next phase until the current one's exit criteria are met. Suggested calendar windows assume work starts now (2026-08-31); adjust to actual start date.
+Phases are scoped by outcome, not just time — don't start the next phase until the current one's exit criteria are met. Suggested calendar windows assume work starts 2026-08-31; adjust to actual start date. See [CHANGELOG.md](./CHANGELOG.md) for the dated build log behind this roadmap.
 
 ---
 
@@ -14,23 +14,30 @@ Phases are scoped by outcome, not just time — don't start the next phase until
 
 ---
 
-## Phase 1 — MVP build
+## Phase 1 — MVP build 🟡 in progress
 
 **Target window**: 2026-09-01 → 2026-09-21 (3 weeks)
 
-**Ship**:
-- Supabase schema for users, screenshot uploads, generations
-- Screenshot upload UI (drag-drop/paste, client-side compress)
-- Generation pipeline: image → Claude (via Vercel AI Gateway) → 3 post variations + hashtags
-- Tone selector (Professional / Casual / Hype)
-- Copy-to-clipboard + inline edit
-- Post history view
-- Auth (Supabase email/Google)
-- Razorpay subscription checkout (₹299/mo, ₹2,999/yr) + UPI AutoPay
-- Free tier: 3 lifetime generations, no card required
-- Usage cap enforcement to bound AI cost exposure
+**Shipped** (live in production as of 2026-09-01 — see [CHANGELOG.md](./CHANGELOG.md)):
+- ✅ Supabase schema for users, screenshot uploads, generations (RLS-protected)
+- ✅ Screenshot upload UI (drag-drop/paste/browse, type/size validation)
+- ✅ Generation pipeline: image → Gemini 2.5 Flash → 3 post variations + hashtags
+- ✅ Post type templates (Milestone / Lesson / Contrarian / Data) — not in the original scope, pulled forward from the Phase 2/3 backlog because it shipped with no 3rd-party dependency
+- ✅ Tone selector (Professional / Casual / Hype)
+- ✅ Readability score + hook-quality feedback per variation (client-side heuristics)
+- ✅ Static posting-time tip
+- ✅ Copy-to-clipboard + inline edit
+- ✅ Post history view, filterable by what was actually used
+- ✅ Auth (Supabase email/password; Google OAuth scaffolded, not wired)
+- ✅ Free tier: 3 lifetime generations, no card required — enforced atomically (row-locked RPC, not check-then-act)
+- ✅ API rate limiting: Vercel Firewall rule staged for `/api/generate` (10 req/5min/IP) — **needs `vercel firewall publish --yes`, not yet live**
 
-**Exit criteria**: a founder can go from screenshot to copied post in under 60 seconds, end to end, with billing working in production.
+**Still open**:
+- ⏳ Razorpay subscription checkout (₹299/mo, ₹2,999/yr) + UPI AutoPay — biggest remaining gap
+- ⏳ Google OAuth wiring (client ID/secret)
+- ⏳ Publish the staged firewall rule
+
+**Exit criteria**: a founder can go from screenshot to copied post in under 60 seconds, end to end, with billing working in production. **Generation loop is done; billing is the remaining blocker to calling Phase 1 complete.**
 
 **Full feature spec**: [PRD.md](./PRD.md) §7.1
 

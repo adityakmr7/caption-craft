@@ -8,6 +8,7 @@ This directory is the source of truth for that pivot. Start here, then go deeper
 |---|---|
 | [PRD.md](./PRD.md) | Product requirements — problem, ICP, positioning, features, requirements, metrics |
 | [ROADMAP.md](./ROADMAP.md) | Phased build plan, from MVP to differentiation moat |
+| [CHANGELOG.md](./CHANGELOG.md) | Dated log of what's actually been built and shipped |
 | [COMPETITORS.md](./COMPETITORS.md) | Competitive landscape — direct, adjacent, and the "do nothing" alternative |
 | [MARKET-RESEARCH.md](./MARKET-RESEARCH.md) | Demand signals, pricing benchmarks, unit economics, sources |
 
@@ -17,4 +18,4 @@ This directory is the source of truth for that pivot. Start here, then go deeper
 
 ## Status
 
-Pre-build. Landing page + waitlist exist (`app/`); no generation logic exists yet. See [ROADMAP.md](./ROADMAP.md) for what ships next.
+**Phase 1 MVP — generation loop live in production**, billing not yet built. A signed-in founder can upload a screenshot, pick a post type and tone, and get 3 Gemini-generated LinkedIn variations with readability/hook feedback, saved to their history. Free tier (3 lifetime generations) is enforced server-side. See [CHANGELOG.md](./CHANGELOG.md) for what shipped when and [ROADMAP.md](./ROADMAP.md) for what's next (Razorpay billing is the main gap).

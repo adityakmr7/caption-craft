@@ -1,8 +1,12 @@
 # Product Requirements Document — CaptionCraft (LinkedIn Pivot)
 
-**Status:** Draft v1
+**Status:** Phase 1 MVP — core generation loop live in production
 **Owner:** Aditya Kumar
-**Last updated:** 2026-08-31
+**Last updated:** 2026-09-01
+
+**Since v1 of this doc, actual implementation has diverged in two places — both captured below and in [CHANGELOG.md](./CHANGELOG.md):**
+- **AI provider**: shipped with Gemini 2.5 Flash (`@ai-sdk/google`) directly, not Claude via Vercel AI Gateway — the Gateway requires a card on file even for free credits, Google AI Studio's free tier doesn't. Revisit once billing exists.
+- **Post length**: shipped as 200–400 words (not 150–220) to match LinkedIn's "see more" fold better at the post-type structures added below.
 
 ---
 
@@ -43,29 +47,33 @@ Every competitor we found (PostPika, Linkmind, Supergrow, Taplio, AuthoredUp, Ma
 
 1. **Sign up** (email or Google via Supabase Auth).
 2. **Upload a screenshot** (product UI, analytics dashboard, payment/payout notification, Product Hunt page, milestone graphic). Drag-drop or paste.
-3. **Pick a tone**: Professional / Casual / Hype.
-4. **Generate** → model reads the screenshot + tone and returns **3 post variations**, each with:
-   - A hook line (first 2 lines — what shows before "see more")
-   - Body copy (150–220 words)
-   - 3–5 relevant hashtags pulled from a curated Indian-startup hashtag set (`#BuildInPublic`, `#StartupIndia`, `#SaaS`, `#IndianStartups`, etc.), not generic AI-picked ones
-5. **Edit inline** if needed, then **copy** the chosen variation to clipboard.
-6. Post is saved to the user's **history/library** for reuse or repurposing later.
+3. **Pick a post type** (Milestone / Lesson / Contrarian / Data) and a **tone** (Professional / Casual / Hype).
+4. **Generate** → model reads the screenshot, post type, and tone and returns **3 post variations**, each with:
+   - A hook line (first ~210 characters — what shows before "see more"), checked against a hook-quality heuristic (generic openers, missing numbers, bare engagement-bait flagged in the UI)
+   - Body copy (200–400 words), with a live readability indicator (word count + short/good/long)
+   - 3–5 relevant hashtags pulled from a curated Indian-startup hashtag set (`#BuildInPublic`, `#StartupIndia`, `#SaaS`, `#IndianStartups`, etc.), not generic AI-picked ones, individually removable
+5. **Edit inline** if needed, then **copy** the chosen variation to clipboard — selection is recorded against the generation.
+6. Post is saved to the user's **history/library**, tagged with tone and post type, for reuse or repurposing later.
 
 ## 7. Feature requirements
 
 ### 7.1 MVP (see [ROADMAP.md](./ROADMAP.md) Phase 1)
 
-| Feature | Requirement |
-|---|---|
-| Screenshot upload | Accept PNG/JPG up to 10MB; client-side resize/compress before upload to control AI input-token cost |
-| Post generation | 3 distinct variations per generation, generated via Claude (vision + text) through the Vercel AI Gateway; target < 8s p95 latency |
-| Tone selector | Professional / Casual / Hype — changes voice, not facts |
-| Hashtag suggestions | Curated static + AI-selected set, editable by the user before copying |
-| Auth | Email/Google via Supabase |
-| Billing | Razorpay subscription checkout — ₹299/mo, ₹2,999/yr; UPI AutoPay supported (3x higher recurring success than international cards for Indian users) |
-| Free tier / trial | 3 free generations, no card required, to prove value before asking for payment |
-| Post history | Every generation saved to the user's account, retrievable and re-copyable |
-| Usage cap enforcement | Free tier capped at 3 lifetime generations; paid tier capped at a fair-use ceiling (e.g. 100/mo) to bound AI cost exposure |
+| Feature | Requirement | Status |
+|---|---|---|
+| Screenshot upload | Accept PNG/JPEG/WebP up to 10MB, drag-drop/paste/browse | ✅ shipped |
+| Post generation | 3 distinct variations per generation, generated via Gemini 2.5 Flash (vision + text); atomic free-tier reservation to avoid race conditions on concurrent requests | ✅ shipped |
+| Post type templates | Milestone / Lesson / Contrarian / Data — each with its own structure guidance in the prompt | ✅ shipped |
+| Tone selector | Professional / Casual / Hype — changes voice, not facts | ✅ shipped |
+| Readability + hook feedback | Word count/length indicator and hook-quality heuristics, client-side, no AI call | ✅ shipped |
+| Hashtag suggestions | Curated AI-selected set, individually removable before copying | ✅ shipped |
+| Auth | Email/password via Supabase; Google OAuth scaffolded, not yet wired to a client ID | ✅ shipped (email), ⏳ Google |
+| Billing | Razorpay subscription checkout — ₹299/mo, ₹2,999/yr; UPI AutoPay | ⏳ not started |
+| Free tier / trial | 3 free generations, no card required | ✅ shipped |
+| Post history | Every generation saved with tone + post type + selected variation, retrievable and re-copyable | ✅ shipped |
+| Usage cap enforcement | Free tier capped at 3 lifetime generations, enforced via row-locked Postgres RPC (not check-then-act) | ✅ shipped |
+| API abuse protection | Vercel Firewall rate limit on `/api/generate` (10 req/5min/IP) | ⏳ staged, awaiting publish |
+| Posting-time guidance | Static "best time to post" tip (Tue–Thu, 9 AM–5 PM IST) — no personalization | ✅ shipped |
 
 ### 7.2 V1 — retention (Phase 2)
 
@@ -100,11 +108,12 @@ Every competitor we found (PostPika, Linkmind, Supergrow, Taplio, AuthoredUp, Ma
 
 ## 10. Tech approach (summary)
 
-- **Frontend/hosting**: Next.js App Router on Vercel (already scaffolded).
-- **Auth/DB/storage**: Supabase (already wired for waitlist; extend schema for users, generations, screenshots).
-- **AI**: Claude (Sonnet 5 default, Haiku 4.5 as a cost-down option) called through the Vercel AI Gateway rather than a raw provider SDK.
-- **Payments**: Razorpay (subscriptions, UPI AutoPay support, INR-native).
-- **Email**: Resend, for receipts and streak-nudge notifications.
+- **Frontend/hosting**: Next.js 16 App Router on Vercel. ✅ live.
+- **Auth/DB/storage**: Supabase — `profiles`/`generations` tables, RLS policies, `screenshots` storage bucket, atomic free-tier RPC. ✅ live.
+- **AI**: Gemini 2.5 Flash via `@ai-sdk/google` (AI SDK v7, `generateText` + `Output.object`), called directly rather than through Vercel AI Gateway — see status note at the top of this doc. ✅ live.
+- **Security**: Vercel Firewall rate-limit rule on `/api/generate` (staged, not yet published); RLS on all user data; service-role key server-only. ⏳ partial.
+- **Payments**: Razorpay (subscriptions, UPI AutoPay support, INR-native). ⏳ not started — biggest gap toward the 100-paying-customer goal.
+- **Email**: Resend, for receipts and streak-nudge notifications. ⏳ not started.
 
 Full cost breakdown: [MARKET-RESEARCH.md](./MARKET-RESEARCH.md) §Cost to launch.
 
