@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/app/lib/supabase/server";
 import GenerationWorkspace from "./generation-workspace";
@@ -34,14 +35,22 @@ export default async function AppHome() {
             <p className="text-sm text-[var(--text-3)] mb-1">Signed in as</p>
             <h1 className="text-lg font-semibold">{user.email}</h1>
           </div>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/app/billing"
               className="btn-ghost px-4 py-2 text-sm font-semibold"
             >
-              Sign out
-            </button>
-          </form>
+              {profile?.plan && profile.plan !== "free" ? "Billing" : "Upgrade"}
+            </Link>
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                className="btn-ghost px-4 py-2 text-sm font-semibold"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         <GenerationWorkspace initialRemainingFree={remainingFree} />

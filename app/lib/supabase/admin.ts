@@ -14,6 +14,39 @@ type Database = {
         Update: { email?: string };
         Relationships: [];
       };
+      profiles: {
+        Row: {
+          id: string;
+          plan: "free" | "monthly" | "yearly";
+          free_generations_used: number;
+          razorpay_customer_id: string | null;
+          razorpay_subscription_id: string | null;
+          subscription_status: string | null;
+          current_period_end: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: Partial<{
+          plan: "free" | "monthly" | "yearly";
+          razorpay_customer_id: string | null;
+          razorpay_subscription_id: string | null;
+          subscription_status: string | null;
+          current_period_end: string | null;
+        }>;
+        Relationships: [];
+      };
+      billing_events: {
+        Row: {
+          id: string;
+          razorpay_event_id: string;
+          event_type: string;
+          payload: unknown;
+          processed_at: string;
+        };
+        Insert: { razorpay_event_id: string; event_type: string; payload: unknown };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

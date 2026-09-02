@@ -25,6 +25,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 const FREE_LIFETIME_CAP = 3; // PRD §7.1
+const PAID_MONTHLY_CAP = 100; // PRD §7.1 — fair-use ceiling to bound AI cost exposure
 
 const variationSchema = z.object({
   variations: z
@@ -153,6 +154,40 @@ export async function POST(request: Request) {
 
   const plan = reservation.plan;
   const usedAfterReservation = reservation.free_generations_used ?? 0;
+
+  // Paid plans bypass the free-tier cap entirely (see increment_free_generation),
+  // but still need *some* ceiling — an unbounded paid account is unbounded
+  // Gemini spend. Checked by calendar month, not stored as a counter, so
+  // there's no separate reset job to keep correct.
+  if (plan !== "free") {
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+
+    const { count, error: countError } = await supabase
+      .from("generations")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", startOfMonth.toISOString());
+
+    if (countError) {
+      console.error("fair-use count failed", countError);
+      return NextResponse.json(
+        { error: "Couldn't load your account. Try again." },
+        { status: 500 }
+      );
+    }
+
+    if ((count ?? 0) >= PAID_MONTHLY_CAP) {
+      return NextResponse.json(
+        {
+          error: `You've hit the fair-use limit of ${PAID_MONTHLY_CAP} generations this month — it resets next month.`,
+          code: "FAIR_USE_LIMIT_REACHED",
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
