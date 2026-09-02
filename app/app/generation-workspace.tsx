@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Check, Clock, Copy, ImagePlus, Loader2, TriangleAlert, X } from "lucide-react";
 import { analyzeHook, analyzeReadability } from "./text-analysis";
+import LinkedInPreview from "./linkedin-preview";
 
 type Tone = "professional" | "casual" | "hype";
 type PostType = "milestone" | "lesson" | "contrarian" | "data";
@@ -117,7 +118,16 @@ function VariationCard({
         )}
       </div>
 
-      <AutoGrowTextarea value={text} onChange={setText} />
+      <LinkedInPreview text={text} hashtags={hashtags} />
+
+      <details className="group">
+        <summary className="cursor-pointer text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+          Edit text
+        </summary>
+        <div className="mt-3">
+          <AutoGrowTextarea value={text} onChange={setText} />
+        </div>
+      </details>
 
       <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
         <span className={`h-1.5 w-1.5 rounded-full ${READABILITY_COLOR[readability.level]}`} />
