@@ -79,7 +79,7 @@ function VariationCard({
   index: number;
   isSelected: boolean;
   dimmed: boolean;
-  onUseThis: (index: number, fullText: string) => void;
+  onUseThis: (index: number, text: string, hashtags: string[]) => void;
 }) {
   const [text, setText] = useState(variation.text);
   const [hashtags, setHashtags] = useState(variation.hashtags);
@@ -97,7 +97,7 @@ function VariationCard({
     } catch {
       // clipboard unavailable — selection still gets recorded below
     }
-    onUseThis(index, full);
+    onUseThis(index, text, hashtags);
   };
 
   return (
@@ -259,13 +259,16 @@ export default function GenerationWorkspace({
     }
   };
 
-  const handleUseThis = (index: number) => {
+  const handleUseThis = (index: number, text: string, hashtags: string[]) => {
     setSelectedIndex(index);
     if (!result?.id) return;
+    // Persists any edits made in the "Edit text" box, not just the
+    // selection — otherwise an edit only ever lived in local component
+    // state and history always showed the original unedited AI output.
     fetch(`/api/generations/${result.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selectedVariation: index }),
+      body: JSON.stringify({ selectedVariation: index, text, hashtags }),
     }).catch(() => {
       // best-effort — the copy already succeeded, so the user isn't blocked
     });

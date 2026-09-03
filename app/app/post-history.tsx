@@ -1,5 +1,7 @@
 import { Check } from "lucide-react";
 import { createClient } from "@/app/lib/supabase/server";
+import LinkedInPreview from "./linkedin-preview";
+import DeleteGenerationButton from "./delete-generation-button";
 
 type Variation = { text: string; hashtags: string[] };
 
@@ -53,11 +55,14 @@ export default async function PostHistory({ userId }: { userId: string }) {
                   year: "numeric",
                 })}
               </span>
-              <div className="flex items-center gap-1.5">
-                {g.post_type && POST_TYPE_LABELS[g.post_type] && (
-                  <span className="cc-chip text-xs">{POST_TYPE_LABELS[g.post_type]}</span>
-                )}
-                <span className="cc-chip text-xs capitalize">{g.tone}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  {g.post_type && POST_TYPE_LABELS[g.post_type] && (
+                    <span className="cc-chip text-xs">{POST_TYPE_LABELS[g.post_type]}</span>
+                  )}
+                  <span className="cc-chip text-xs capitalize">{g.tone}</span>
+                </div>
+                <DeleteGenerationButton id={g.id} />
               </div>
             </div>
 
@@ -67,16 +72,7 @@ export default async function PostHistory({ userId }: { userId: string }) {
                   <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
                   What you used
                 </span>
-                <p className="text-sm text-[var(--text-1)] whitespace-pre-line">
-                  {selected.text}
-                </p>
-                <div className="flex gap-1.5 flex-wrap mt-1">
-                  {selected.hashtags.map((tag) => (
-                    <span key={tag} className="cc-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                <LinkedInPreview text={selected.text} hashtags={selected.hashtags} />
               </div>
             )}
 
@@ -86,12 +82,9 @@ export default async function PostHistory({ userId }: { userId: string }) {
               </summary>
               <div className="mt-3 flex flex-col gap-3">
                 {others.map((v, i) => (
-                  <p
-                    key={i}
-                    className="text-sm text-[var(--text-2)] whitespace-pre-line border-t border-[var(--border-soft)] pt-3"
-                  >
-                    {v.text}
-                  </p>
+                  <div key={i} className="border-t border-[var(--border-soft)] pt-3">
+                    <LinkedInPreview text={v.text} hashtags={v.hashtags} />
+                  </div>
                 ))}
               </div>
             </details>
