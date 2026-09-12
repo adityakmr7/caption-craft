@@ -12,6 +12,7 @@ import {
   History,
   ImagePlus,
   Menu,
+  Puzzle,
   SlidersHorizontal,
   UploadCloud,
   X,
@@ -574,6 +575,27 @@ function Features() {
             </p>
           </RevealItem>
         </div>
+
+        <RevealItem
+          index={4}
+          className="mt-5 rounded-[0.875rem] border border-dashed border-[var(--border)] p-6 flex items-center gap-4"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--text-3)]">
+            <Puzzle className="h-4 w-4" strokeWidth={2.1} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="text-sm font-semibold text-[var(--text-1)]">
+                Chrome extension — post without leaving LinkedIn
+              </h3>
+              <span className="cc-chip text-xs">Coming later</span>
+            </div>
+            <p className="text-sm leading-relaxed text-[var(--text-3)]">
+              On the roadmap: pick a generated variation right from LinkedIn&apos;s
+              own compose box, no tab-switching.
+            </p>
+          </div>
+        </RevealItem>
       </div>
     </section>
   );
