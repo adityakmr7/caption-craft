@@ -2,7 +2,7 @@
 
 **Status:** Phase 1 MVP — core generation loop live in production
 **Owner:** Aditya Kumar
-**Last updated:** 2026-09-01
+**Last updated:** 2026-09-12
 
 **Since v1 of this doc, actual implementation has diverged in two places — both captured below and in [CHANGELOG.md](./CHANGELOG.md):**
 - **AI provider**: shipped with Gemini 2.5 Flash (`@ai-sdk/google`) directly, not Claude via Vercel AI Gateway — the Gateway requires a card on file even for free credits, Google AI Studio's free tier doesn't. Revisit once billing exists.
@@ -26,9 +26,12 @@ Indian startup founders are joining LinkedIn and posting "build in public" conte
 
 ## 3. Positioning
 
-> The only LinkedIn tool that starts from a screenshot, not a blank prompt.
+> The only LinkedIn tool that starts from a screenshot, not a blank prompt — and writes like you, not like AI.
 
-Every competitor we found (PostPika, Linkmind, Supergrow, Taplio, AuthoredUp, MagicPost) starts from an idea, topic, or URL. None start from "here's the artifact I already have — a screenshot of my dashboard, my MRR chart, my shipped UI." That's the product wedge. "India-first + rupee pricing" is necessary (PostPika and Linkmind already have it) but not sufficient as a differentiator on its own.
+Two pillars, not one:
+
+1. **Screenshot-first input.** Every competitor we found (PostPika, Linkmind, Supergrow, Taplio, AuthoredUp, MagicPost) starts from an idea, topic, or URL. None start from "here's the artifact I already have — a screenshot of my dashboard, my MRR chart, my shipped UI." "India-first + rupee pricing" is necessary (PostPika and Linkmind already have it) but not sufficient as a differentiator on its own.
+2. **Voice matching (added 2026-09-12).** The user pastes 2–3 of their own past LinkedIn posts during onboarding; every generation afterward is written to match their actual sentence rhythm and phrasing, not a generic tone dial. This is the sharper answer to §11's biggest named risk — a founder pasting a screenshot description into free ChatGPT gets copy that sounds like ChatGPT; CaptionCraft's output sounds like *them*. No competitor in [COMPETITORS.md](./COMPETITORS.md) does real per-founder style learning — they all stop at a tone selector (bold/warm/professional). It also compounds: every edited/selected post becomes more training signal, so a copycat can clone the screenshot-upload UI in a sprint but can't clone a specific user's accumulated voice history. Full design: §7.1a below.
 
 ## 4. Goals
 
@@ -75,11 +78,22 @@ Every competitor we found (PostPika, Linkmind, Supergrow, Taplio, AuthoredUp, Ma
 | API abuse protection | Vercel Firewall rate limit on `/api/generate` (10 req/5min/IP) | ⏳ staged, awaiting publish |
 | Posting-time guidance | Static "best time to post" tip (Tue–Thu, 9 AM–5 PM IST) — no personalization | ✅ shipped |
 
+### 7.1a Voice matching — reprioritized signature feature (2026-09-12)
+
+Originally scoped as "Voice memory" under Phase 3 retention (§7.2 below, kept for history). Pulled forward because it's the strongest available answer to the free-ChatGPT substitution risk (§11) and no researched competitor does it — see §3 Positioning. Two data sources, not mutually exclusive:
+
+- **Explicit (build first)**: an onboarding step — not an optional settings toggle, which gets skipped — asking for 2–3 pasted past LinkedIn posts before the user's first generation. Solves the cold-start problem: a brand-new trial user should feel voice-matching on generation #1, not after their third use.
+- **Implicit (already half-built)**: every `generations` row with a `selected_variation` already captures the user's *edited, final* text — the diff between Gemini's draft and what they actually kept is real style signal, collected as a byproduct of normal use with zero extra friction.
+
+Implementation approach: few-shot first (inject 2–3 of the user's own past/edited posts directly into the generation prompt, instructed to mirror rhythm and phrasing but never reuse specific facts/numbers from them) — cheapest to ship, no new infra. A distilled style-descriptor summary (one extra LLM call every ~5 new posts, replacing raw examples once the corpus grows) is a later optimization once per-user volume justifies it, not a v1 requirement.
+
+Non-functional note: 2–3 short past posts add roughly 500–900 input tokens per generation — negligible against the ₹30/user/month budget in §8. Reuses only the user's own previously-generated content already stored under their account; no scraping of their real LinkedIn profile, no cross-user data — consistent with the privacy stance in §8.
+
 ### 7.2 V1 — retention (Phase 2)
 
 - **Streak tracker**: visualize consecutive weeks the founder has posted, nudge via email if a week is about to break.
 - **Repurpose**: turn one screenshot generation into a shorter Twitter/X variant.
-- **Voice memory**: let the model learn from the user's 3–5 favorite past posts to better match their voice over time.
+- ~~**Voice memory**~~ — reprioritized to §7.1a above; no longer gated on Phase 3.
 - **Basic post-performance input**: user can paste in how a post did (likes/comments) so future generations can lean toward what worked — no LinkedIn API dependency required, manual input is enough for v1.
 
 ### 7.3 V2 — moat building (Phase 3)
@@ -120,7 +134,7 @@ Full cost breakdown: [MARKET-RESEARCH.md](./MARKET-RESEARCH.md) §Cost to launch
 ## 11. Risks & open questions
 
 - **Competitive risk**: PostPika and Linkmind already occupy "India-first LinkedIn tool." If either adds a screenshot-first flow, the wedge narrows fast — ship the MVP quickly rather than gold-plating.
-- **Substitution risk**: the target user is exactly the kind of person who'll just paste a screenshot description into free ChatGPT/Claude instead of paying. The product must clearly save more time/friction than that baseline to justify ₹299/mo — worth user-testing before heavy marketing spend.
+- **Substitution risk**: the target user is exactly the kind of person who'll just paste a screenshot description into free ChatGPT/Claude instead of paying. The product must clearly save more time/friction than that baseline to justify ₹299/mo — worth user-testing before heavy marketing spend. Voice matching (§7.1a) is the primary planned mitigation: generic ChatGPT output sounds like ChatGPT regardless of prompting; matching the specific founder's own writing style is a gap free tools don't close.
 - **Distribution risk**: no paid marketing budget assumed; growth depends on founder-led posting, community partnerships (SaaSBOOMi, Turbostart, Peerlist, IndieHackers-India), and cold outreach. This is unproven and should be tested in parallel with the build, not after.
 - **Open question**: does the ICP want auto-publish enough to justify the LinkedIn API compliance cost sooner than Phase 3? Revisit after MVP usage data.
 

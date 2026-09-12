@@ -1,6 +1,6 @@
 # Roadmap
 
-**Last updated:** 2026-09-01
+**Last updated:** 2026-09-12
 
 Phases are scoped by outcome, not just time — don't start the next phase until the current one's exit criteria are met. Suggested calendar windows assume work starts 2026-08-31; adjust to actual start date. See [CHANGELOG.md](./CHANGELOG.md) for the dated build log behind this roadmap.
 
@@ -43,6 +43,21 @@ Phases are scoped by outcome, not just time — don't start the next phase until
 
 ---
 
+## Phase 1.5 — Signature feature: voice matching 🆕 reprioritized 2026-09-12
+
+**Target window**: runs alongside the tail of Phase 1 / start of Phase 2 — this should be live *before* launch messaging goes out, not after.
+
+Originally "Voice memory" under Phase 3 (§ below, kept for history) — pulled forward. Reasoning: it's the sharpest available mitigation for the free-ChatGPT substitution risk (PRD §11), and no competitor in [COMPETITORS.md](./COMPETITORS.md) does real per-founder style learning. See [PRD.md](./PRD.md) §7.1a for the full design.
+
+**Ship**:
+- Onboarding step: prompt for 2–3 pasted past LinkedIn posts before first generation (not a skippable settings toggle)
+- Few-shot injection of the user's own past/edited posts into the generation prompt
+- Fallback to today's tone-only behavior when a user has zero samples
+
+**Exit criteria**: a new signup's *first* generation is visibly influenced by their pasted samples — not just something that improves after several uses.
+
+---
+
 ## Phase 2 — Launch & distribution
 
 **Target window**: 2026-09-22 → 2026-10-12 (3 weeks, runs partly in parallel with Phase 1 QA)
@@ -64,7 +79,7 @@ Phases are scoped by outcome, not just time — don't start the next phase until
 **Ship**:
 - Streak tracker + email nudges
 - Repurpose to Twitter/X format
-- Voice memory (learn from user's favorite past posts)
+- ~~Voice memory~~ — moved to Phase 1.5, see above
 - Manual post-performance input to steer future generations
 
 **Exit criteria**: weekly active generation rate among paid users ≥ 50% (target from [PRD.md](./PRD.md) §9).
