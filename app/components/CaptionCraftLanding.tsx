@@ -93,12 +93,35 @@ function HeroReveal({
 
 /* ---------- shared bits ---------- */
 
+// The mark: two crop/viewfinder corners (the screenshot you start from)
+// resolving into two lines of text (the post it becomes) — literally
+// "screenshot in, post out" in one glyph. Keep this path in sync with
+// the generated favicons in app/icon.tsx and app/apple-icon.tsx.
+function BrandGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 14V5h9M10 15h9M13 19h6"
+        stroke="currentColor"
+        strokeWidth={2.3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function BrandMark({ size = "h-8 w-8" }: { size?: string }) {
   return (
     <span
       className={`flex ${size} shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]`}
     >
-      <ImagePlus className="h-4 w-4 text-[#171310]" strokeWidth={2.2} />
+      <BrandGlyph className="h-[55%] w-[55%] text-[#171310]" />
     </span>
   );
 }
