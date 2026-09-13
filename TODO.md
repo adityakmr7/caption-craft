@@ -1,8 +1,10 @@
 # TODO
 
-**Last updated:** 2026-09-13 (pre-distribution sprint: tone warning, feedback loop, Google OAuth button, free tier → 10/month)
+**Last updated:** 2026-09-13 (pre-distribution sprint: tone warning, feedback loop, Google OAuth button, free tier → 10/month — all live-verified)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
+
+**Live verification note (2026-09-13):** a full live pass with a fresh test signup caught a real bug the initial code review missed — `inferToneFromSamples`'s hype-detection regex carried a shared `/gi` flag, making its ALL-CAPS-word check case-*insensitive* and matching nearly every word as "hype" regardless of case. Confirmed via a test account pasting clearly casual samples that got classified as "Hype." Fixed, redeployed, and re-verified live (correct classification, and the warning banner correctly disappears when the selected tone now matches). This is the second time an actual browser run surfaced something code review alone didn't — treat "verified" claims as provisional until exercised with real, somewhat adversarial input, not just a clean build.
 
 ---
 
