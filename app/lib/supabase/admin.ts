@@ -19,6 +19,7 @@ type Database = {
           id: string;
           plan: "free" | "monthly" | "yearly";
           free_generations_used: number;
+          free_period_start: string;
           razorpay_customer_id: string | null;
           razorpay_subscription_id: string | null;
           subscription_status: string | null;

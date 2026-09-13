@@ -6,6 +6,11 @@ import GenerationWorkspace from "./generation-workspace";
 import PostHistory from "./post-history";
 import VoiceOnboarding from "./voice-onboarding";
 
+// Kept in sync with app/api/generate/route.ts's FREE_MONTHLY_CAP — not
+// imported from there to avoid pulling a route handler's dependencies
+// (the Gemini/ai-sdk imports) into this page's bundle for one constant.
+const FREE_MONTHLY_CAP = 10;
+
 // Protected dashboard root. The proxy (proxy.ts) already redirects
 // unauthenticated requests to /login as an optimistic check, but per
 // Next.js's auth guidance, every protected page also verifies the session
@@ -20,13 +25,26 @@ export default async function AppHome() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, free_generations_used")
+    .select("plan, free_generations_used, free_period_start")
     .eq("id", user.id)
     .single();
 
+  // 10/month, not 3 lifetime (2026-09-13) — see
+  // supabase/migrations/0012_free_tier_monthly.sql. free_generations_used
+  // only actually resets inside increment_free_generation, which runs on
+  // generate, not on page load — so a user who hasn't generated yet this
+  // month would otherwise see last month's stale count here. Mirror the
+  // RPC's rollover check for display purposes only; this never writes.
+  const currentPeriodStart = new Date(
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
+  );
+  const freeUsedThisPeriod =
+    profile && new Date(profile.free_period_start) < currentPeriodStart
+      ? 0
+      : (profile?.free_generations_used ?? 0);
   const remainingFree =
     profile && profile.plan === "free"
-      ? Math.max(0, 3 - profile.free_generations_used)
+      ? Math.max(0, FREE_MONTHLY_CAP - freeUsedThisPeriod)
       : null;
 
   // Voice-matching onboarding (PRD §7.1a) — mandatory for a brand-new user

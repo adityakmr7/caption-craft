@@ -633,7 +633,7 @@ const PLANS = [
     period: "/ month",
     highlight: false,
     features: [
-      "3 free generations to start, no card",
+      "10 free generations/month, no card",
       "3 post variations per screenshot",
       "Post history + hashtag suggestions",
       "UPI AutoPay, cancel anytime",

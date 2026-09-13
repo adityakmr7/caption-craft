@@ -102,7 +102,7 @@ function LoginForm() {
       <p className="text-sm text-[var(--text-2)] mb-6">
         {mode === "sign-in"
           ? "Sign in to generate your next post."
-          : "3 free generations, no card required."}
+          : "10 free generations a month, no card required."}
       </p>
 
       {authError && (
