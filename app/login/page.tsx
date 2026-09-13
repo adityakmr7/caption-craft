@@ -11,6 +11,9 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/app";
+  // Set by app/auth/callback/route.ts when the OAuth code exchange fails
+  // (e.g. a Google sign-in that errors out or gets cancelled).
+  const authError = searchParams.get("error");
 
   const [mode, setMode] = useState<Mode>("sign-in");
   const [email, setEmail] = useState("");
@@ -69,6 +72,14 @@ function LoginForm() {
     router.refresh();
   };
 
+  const handleGoogle = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${next}` },
+    });
+  };
+
   if (confirmSent) {
     return (
       <div className="cc-card p-8 text-center">
@@ -94,9 +105,25 @@ function LoginForm() {
           : "3 free generations, no card required."}
       </p>
 
-      {/* Google OAuth intentionally hidden — scaffolded but not wired to a
-          real client ID yet. Re-add once that's set up post-launch; see
-          docs/PRD.md §7.1. */}
+      {authError && (
+        <p className="text-sm text-red-400 mb-4">
+          Sign-in failed. Try again.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleGoogle}
+        className="btn-ghost w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold mb-4"
+      >
+        Continue with Google
+      </button>
+
+      <div className="flex items-center gap-3 mb-4">
+        <span className="h-px flex-1 bg-[var(--border)]" />
+        <span className="text-xs text-[var(--text-3)]">or</span>
+        <span className="h-px flex-1 bg-[var(--border)]" />
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div>
