@@ -299,8 +299,8 @@ export default function GenerationWorkspace({
       {remainingFree !== null && (
         <p className="text-sm text-[var(--text-3)]">
           {remainingFree > 0
-            ? `${remainingFree} free generation${remainingFree === 1 ? "" : "s"} left`
-            : "You've used all your free generations."}
+            ? `${remainingFree} free generation${remainingFree === 1 ? "" : "s"} left this month`
+            : "You've used all your free generations this month — more next month, or upgrade for unlimited."}
         </p>
       )}
 

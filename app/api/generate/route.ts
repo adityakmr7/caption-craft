@@ -25,7 +25,11 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/webp",
 ]);
-const FREE_LIFETIME_CAP = 3; // PRD §7.1
+// 2026-09-13: changed from a 3-lifetime cap to 10/month — 3 lifetime was
+// too restrictive to even calibrate voice matching before running out.
+// See supabase/migrations/0012_free_tier_monthly.sql for the RPC-side
+// monthly rollover this depends on.
+const FREE_MONTHLY_CAP = 10;
 const PAID_MONTHLY_CAP = 100; // PRD §7.1 — fair-use ceiling to bound AI cost exposure
 
 const variationSchema = z.object({
@@ -146,7 +150,7 @@ export async function POST(request: Request) {
   if (!reservation.allowed) {
     return NextResponse.json(
       {
-        error: "You've used all 3 free generations. Join the waitlist for paid access.",
+        error: `You've used all ${FREE_MONTHLY_CAP} free generations this month. Upgrade for unlimited.`,
         code: "FREE_LIMIT_REACHED",
       },
       { status: 402 }
@@ -273,7 +277,7 @@ export async function POST(request: Request) {
   }
 
   const remainingFree =
-    plan === "free" ? Math.max(0, FREE_LIFETIME_CAP - usedAfterReservation) : null;
+    plan === "free" ? Math.max(0, FREE_MONTHLY_CAP - usedAfterReservation) : null;
 
   return NextResponse.json({
     id: generation.id,
