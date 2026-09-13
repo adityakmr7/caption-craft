@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/app/lib/supabase/server";
-import { MIN_ONBOARDING_SAMPLES } from "@/app/lib/voice";
+import { MIN_ONBOARDING_SAMPLES, inferToneFromSamples } from "@/app/lib/voice";
 import GenerationWorkspace from "./generation-workspace";
 import PostHistory from "./post-history";
 import VoiceOnboarding from "./voice-onboarding";
@@ -34,7 +34,7 @@ export default async function AppHome() {
   // instead of after several uses. Never re-shown to a user who already
   // has generations (an existing account from before this feature shipped
   // shouldn't get retroactively gated) or who already completed it.
-  const [{ count: generationsCount }, { count: voiceSamplesCount }] =
+  const [{ count: generationsCount }, { data: voiceSamples }] =
     await Promise.all([
       supabase
         .from("generations")
@@ -42,13 +42,21 @@ export default async function AppHome() {
         .eq("user_id", user.id),
       supabase
         .from("voice_samples")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id),
+        .select("content")
+        .eq("user_id", user.id)
+        .returns<{ content: string }[]>(),
     ]);
 
+  const voiceSamplesCount = voiceSamples?.length ?? 0;
   const needsVoiceOnboarding =
-    (generationsCount ?? 0) === 0 &&
-    (voiceSamplesCount ?? 0) < MIN_ONBOARDING_SAMPLES;
+    (generationsCount ?? 0) === 0 && voiceSamplesCount < MIN_ONBOARDING_SAMPLES;
+
+  // Tone-conflict warning: guess the tone the user's own samples read
+  // closest to, so GenerationWorkspace can nudge if they pick a different
+  // one. Heuristic, not authoritative — see inferToneFromSamples.
+  const inferredVoiceTone = voiceSamples?.length
+    ? inferToneFromSamples(voiceSamples.map((s) => s.content))
+    : null;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-1)] px-6 py-12">
@@ -80,7 +88,10 @@ export default async function AppHome() {
           <VoiceOnboarding />
         ) : (
           <>
-            <GenerationWorkspace initialRemainingFree={remainingFree} />
+            <GenerationWorkspace
+              initialRemainingFree={remainingFree}
+              inferredVoiceTone={inferredVoiceTone}
+            />
             <PostHistory userId={user.id} />
           </>
         )}

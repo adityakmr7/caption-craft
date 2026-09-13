@@ -35,6 +35,12 @@ const TONES: { value: Tone; label: string }[] = [
   { value: "hype", label: "Hype" },
 ];
 
+const TONE_LABELS: Record<Tone, string> = {
+  professional: "Professional",
+  casual: "Casual",
+  hype: "Hype",
+};
+
 const READABILITY_COLOR: Record<string, string> = {
   short: "bg-yellow-400",
   good: "bg-[var(--success)]",
@@ -188,8 +194,13 @@ function VariationCard({
 
 export default function GenerationWorkspace({
   initialRemainingFree,
+  inferredVoiceTone,
 }: {
   initialRemainingFree: number | null;
+  // Heuristic guess (app/lib/voice.ts) at which tone the user's own voice
+  // samples read closest to. Null when there's not enough sample text to
+  // guess, or the guess matches whatever tone is currently selected.
+  inferredVoiceTone?: Tone | null;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -385,6 +396,25 @@ export default function GenerationWorkspace({
                 </button>
               ))}
             </div>
+            {inferredVoiceTone && inferredVoiceTone !== tone && (
+              <div className="mt-2.5 flex items-start gap-2 rounded-[0.5rem] border border-yellow-400/25 bg-yellow-400/[0.06] px-3 py-2.5">
+                <TriangleAlert
+                  className="h-3.5 w-3.5 shrink-0 mt-0.5 text-yellow-400"
+                  strokeWidth={2}
+                />
+                <p className="text-xs leading-relaxed text-[var(--text-2)]">
+                  Your voice samples read more like{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTone(inferredVoiceTone)}
+                    className="font-semibold text-[var(--accent)] hover:underline"
+                  >
+                    {TONE_LABELS[inferredVoiceTone]}
+                  </button>{" "}
+                  — {TONE_LABELS[tone]} might not match your natural voice.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
