@@ -39,7 +39,7 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 - Implicit signal: a past generation's edited/selected text also feeds the prompt, no separate opt-in
 - Few-shot injection into the generation prompt (up to 3 examples, explicit first), instructed to mirror rhythm/phrasing but never reuse specific facts or numbers
 - Gating never retroactively blocks an existing account from before this shipped
-- ⚠️ Not yet run end-to-end with a real new signup — verified via code review, clean `tsc`/`eslint`/`build`, and read-only checks against production, but a live browser run through onboarding → first generation is still worth doing manually
+- Live end-to-end verified against production with a real throwaway signup: onboarding gate appeared correctly, samples saved, gate lifted, a real screenshot upload → real Gemini generation succeeded and was stored, free-tier counter decremented correctly. Test account and its data deleted afterward.
 
 ---
 
