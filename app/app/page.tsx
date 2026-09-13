@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/app/lib/supabase/server";
+import { MIN_ONBOARDING_SAMPLES } from "@/app/lib/voice";
 import GenerationWorkspace from "./generation-workspace";
 import PostHistory from "./post-history";
+import VoiceOnboarding from "./voice-onboarding";
 
 // Protected dashboard root. The proxy (proxy.ts) already redirects
 // unauthenticated requests to /login as an optimistic check, but per
@@ -26,6 +28,27 @@ export default async function AppHome() {
     profile && profile.plan === "free"
       ? Math.max(0, 3 - profile.free_generations_used)
       : null;
+
+  // Voice-matching onboarding (PRD §7.1a) — mandatory for a brand-new user
+  // before their first generation, so the feature kicks in from post #1
+  // instead of after several uses. Never re-shown to a user who already
+  // has generations (an existing account from before this feature shipped
+  // shouldn't get retroactively gated) or who already completed it.
+  const [{ count: generationsCount }, { count: voiceSamplesCount }] =
+    await Promise.all([
+      supabase
+        .from("generations")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+      supabase
+        .from("voice_samples")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+    ]);
+
+  const needsVoiceOnboarding =
+    (generationsCount ?? 0) === 0 &&
+    (voiceSamplesCount ?? 0) < MIN_ONBOARDING_SAMPLES;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-1)] px-6 py-12">
@@ -53,9 +76,14 @@ export default async function AppHome() {
           </div>
         </header>
 
-        <GenerationWorkspace initialRemainingFree={remainingFree} />
-
-        <PostHistory userId={user.id} />
+        {needsVoiceOnboarding ? (
+          <VoiceOnboarding />
+        ) : (
+          <>
+            <GenerationWorkspace initialRemainingFree={remainingFree} />
+            <PostHistory userId={user.id} />
+          </>
+        )}
       </div>
     </div>
   );

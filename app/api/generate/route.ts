@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 import { createClient, getUser } from "@/app/lib/supabase/server";
+import { buildVoicePromptFragment, getVoiceExamples } from "@/app/lib/voice";
 
 // Using Gemini directly (not Vercel AI Gateway) for now — Gateway requires
 // a card on file even for free credits; Google AI Studio's free tier
@@ -191,11 +192,19 @@ export async function POST(request: Request) {
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
+  // Voice matching (PRD §7.1a) — few-shot the founder's own past posts
+  // (onboarding-pasted, falling back to past edited/selected generations)
+  // into the prompt so output mirrors their actual writing voice. Best
+  // effort: a lookup failure here shouldn't block generation, it just
+  // means this call falls back to today's tone-only behavior.
+  const voiceExamples = await getVoiceExamples(supabase, user.id).catch(() => []);
+  const systemPrompt = SYSTEM_PROMPT + buildVoicePromptFragment(voiceExamples);
+
   let output: z.infer<typeof variationSchema>;
   try {
     const result = await generateText({
       model: google("gemini-2.5-flash"),
-      instructions: SYSTEM_PROMPT,
+      instructions: systemPrompt,
       output: Output.object({ schema: variationSchema }),
       messages: [
         {
