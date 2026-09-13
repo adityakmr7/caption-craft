@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-13
+**Last updated:** 2026-09-13 (voice matching shipped)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -34,18 +34,19 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 - Google OAuth button hidden from `/login` (scaffolded, intentionally not wired — see below)
 - Chrome-extension "coming later" teaser on the landing page (not built — see below)
 
+**Voice matching (Phase 1.5)** — the signature differentiator from [PRD §7.1a](./docs/PRD.md)
+- Mandatory onboarding step (not a skippable toggle): a brand-new user pastes 2–3 of their own past LinkedIn posts before their first generation
+- Implicit signal: a past generation's edited/selected text also feeds the prompt, no separate opt-in
+- Few-shot injection into the generation prompt (up to 3 examples, explicit first), instructed to mirror rhythm/phrasing but never reuse specific facts or numbers
+- Gating never retroactively blocks an existing account from before this shipped
+- ⚠️ Not yet run end-to-end with a real new signup — verified via code review, clean `tsc`/`eslint`/`build`, and read-only checks against production, but a live browser run through onboarding → first generation is still worth doing manually
+
 ---
 
 ## ⏳ Remaining
 
 ### Phase 1 close-out
 - [ ] Wire Google OAuth (client ID/secret) — deferred to post-launch on purpose
-
-### Phase 1.5 — Voice matching (not started)
-No code yet — this is the signature differentiator called out in [PRD.md §7.1a](./docs/PRD.md).
-- [ ] Onboarding step: paste 2–3 past LinkedIn posts (not skippable)
-- [ ] Few-shot injection of the user's own past/edited posts into the generation prompt
-- [ ] Fallback to today's tone-only behavior for zero-sample users
 
 ### Phase 2 — Launch & distribution (not started)
 - [ ] Convert waitlist to launch invite
