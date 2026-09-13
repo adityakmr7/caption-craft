@@ -85,7 +85,14 @@ export type Tone = "professional" | "casual" | "hype";
 const CASUAL_PATTERN =
   /\b(i'm|don't|can't|it's|we're|you're|didn't|wasn't|isn't|aren't|won't|gonna|wanna|kinda|lol|haha|tbh|ngl|yeah|hey)\b/gi;
 const HYPE_PATTERN =
-  /!|\b[A-Z]{3,}\b|🚀|🎉|🔥|💯|\b(huge|insane|incredible|amazing|massive|wild|crazy)\b/gi;
+  /!|🚀|🎉|🔥|💯|\b(huge|insane|incredible|amazing|massive|wild|crazy)\b/gi;
+// Deliberately case-SENSITIVE and separate from HYPE_PATTERN above — that
+// pattern carries the /i flag for its word list, and combining an
+// all-caps check into the same case-insensitive regex would make
+// [A-Z]{3,} match any 3+ letter word regardless of case (a real bug
+// caught via a live production test: casual text like "haha we broke
+// prod again" was scoring as "hype" because every ordinary word matched).
+const ALL_CAPS_WORD_PATTERN = /\b[A-Z]{3,}\b/g;
 
 export function inferToneFromSamples(samples: string[]): Tone | null {
   const text = samples.join("\n");
@@ -93,7 +100,10 @@ export function inferToneFromSamples(samples: string[]): Tone | null {
   if (words < 15) return null; // too little text to guess anything
 
   const casualDensity = (text.match(CASUAL_PATTERN) ?? []).length / words;
-  const hypeDensity = (text.match(HYPE_PATTERN) ?? []).length / words;
+  const hypeHits =
+    (text.match(HYPE_PATTERN) ?? []).length +
+    (text.match(ALL_CAPS_WORD_PATTERN) ?? []).length;
+  const hypeDensity = hypeHits / words;
 
   if (hypeDensity > 0.02 && hypeDensity >= casualDensity) return "hype";
   if (casualDensity > 0.02) return "casual";
