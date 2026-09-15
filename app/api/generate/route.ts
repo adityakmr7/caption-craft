@@ -4,6 +4,8 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 import { createClient, getUser } from "@/app/lib/supabase/server";
 import { buildVoicePromptFragment, getVoiceExamples } from "@/app/lib/voice";
+import { validateImageFile } from "@/app/lib/image";
+import { buildFactsPromptFragment, factSchema, MAX_FACTS } from "@/app/lib/facts";
 
 // Using Gemini directly (not Vercel AI Gateway) for now — Gateway requires
 // a card on file even for free credits; Google AI Studio's free tier
@@ -19,12 +21,6 @@ type Tone = (typeof TONES)[number];
 const POST_TYPES = ["milestone", "lesson", "contrarian", "data"] as const;
 type PostType = (typeof POST_TYPES)[number];
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB, per PRD §7.1
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-]);
 // 2026-09-13: changed from a 3-lifetime cap to 10/month — 3 lifetime was
 // too restrictive to even calibrate voice matching before running out.
 // See supabase/migrations/0012_free_tier_monthly.sql for the RPC-side
@@ -93,25 +89,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
   }
 
-  const file = formData.get("screenshot");
+  const fileInput = formData.get("screenshot");
   const toneInput = formData.get("tone");
   const postTypeInput = formData.get("postType");
+  const factsInput = formData.get("facts");
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Upload a screenshot." }, { status: 400 });
+  const imageError = validateImageFile(fileInput);
+  if (imageError) {
+    return NextResponse.json({ error: imageError }, { status: 400 });
   }
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    return NextResponse.json(
-      { error: "Screenshot must be PNG, JPEG, or WebP." },
-      { status: 400 }
-    );
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return NextResponse.json(
-      { error: "Screenshot must be under 10MB." },
-      { status: 400 }
-    );
-  }
+  const file = fileInput as File;
+
   if (typeof toneInput !== "string" || !TONES.includes(toneInput as Tone)) {
     return NextResponse.json({ error: "Invalid tone." }, { status: 400 });
   }
@@ -120,6 +108,25 @@ export async function POST(request: Request) {
   }
   const tone = toneInput as Tone;
   const postType = postTypeInput as PostType;
+
+  // Screenshot-confirmation facts (optional — see app/lib/facts.ts). A
+  // client that skipped or failed extraction simply omits this field;
+  // generation proceeds exactly as before that feature existed.
+  let confirmedFacts: z.infer<typeof factSchema>[] = [];
+  if (typeof factsInput === "string" && factsInput.length > 0) {
+    try {
+      const parsed = JSON.parse(factsInput);
+      const result = z.array(factSchema).max(MAX_FACTS).safeParse(parsed);
+      if (result.success) {
+        confirmedFacts = result.data;
+      }
+      // An invalid/oversized payload is silently ignored rather than
+      // rejecting the whole request — facts are a nice-to-have precision
+      // aid, not something worth failing generation over.
+    } catch {
+      // Malformed JSON — same graceful ignore as above.
+    }
+  }
 
   const supabase = await createClient();
 
@@ -202,7 +209,10 @@ export async function POST(request: Request) {
   // effort: a lookup failure here shouldn't block generation, it just
   // means this call falls back to today's tone-only behavior.
   const voiceExamples = await getVoiceExamples(supabase, user.id).catch(() => []);
-  const systemPrompt = SYSTEM_PROMPT + buildVoicePromptFragment(voiceExamples);
+  const systemPrompt =
+    SYSTEM_PROMPT +
+    buildFactsPromptFragment(confirmedFacts) +
+    buildVoicePromptFragment(voiceExamples);
 
   let output: z.infer<typeof variationSchema>;
   try {
