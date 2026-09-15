@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // extension/ is a separate WXT package with its own tooling and
+    // lint setup — same reasoning as its tsconfig.json exclusion.
+    "extension/**",
+    "mobile/**",
   ]),
 ]);
 
