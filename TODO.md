@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-13 (pre-distribution sprint: tone warning, feedback loop, Google OAuth button, free tier → 10/month — all live-verified)
+**Last updated:** 2026-09-15 (screenshot-confirmation step — live-verified)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -49,12 +49,27 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 **Retention data foundation**
 - Post-performance feedback loop: flopped / average / went viral + optional comment, shown 24h+ after generation on a post the user actually used. This is the signal Phase 3 retention work needs — didn't exist before.
 
+**Screenshot-confirmation step** — trust-critical, since the whole pitch is "grounded in your real screenshot"
+- Fires automatically the moment a screenshot is picked: a small, cheap Gemini vision call (`/api/extract-facts`) reads back up to 6 key facts (numbers, percentages, dates, labels) as an editable list — "here's what we read, check it's right" — before generation, not after
+- Per-row edit and remove, "+ Add a fact to check" for anything missed; doesn't touch the free/paid generation cap (it's a preview step, not a generation)
+- Confirmed facts are passed into `/api/generate` and treated as authoritative — the model is instructed not to alter, round, or replace them
+- Best-effort: a failed extraction never blocks generation, same behavior as before this feature existed
+- Live-verified against production with a real signup and a realistic multi-metric screenshot: extraction correctly read all 6 facts, an edited/corrected value ("312" → "310") correctly appeared in the generated post output instead of the screenshot's real number — proves user corrections genuinely override the model's own read, not just cosmetically
+- Known gap, called out in the route's own comment: this route isn't behind the Vercel Firewall rate limit (Hobby plan's one custom rule is already spent on `/api/generate`) — worth adding if usage data shows abuse
+
 ---
 
 ## ⏳ Remaining
 
 ### Auth
 - [ ] **Actually enable Google sign-in** — code is wired (button + callback handling), but two things only the account owner can do remain: (1) get a Google OAuth client ID/secret from Google Cloud Console, (2) enable the Google provider in the Supabase Dashboard's Auth settings and paste them in. Deliberately not something I'll do myself even with credentials in hand — it's a security-relevant settings change, not a code change.
+
+### Product backlog (from 2026-09-14 reconciliation)
+Candidates raised alongside the screenshot-confirmation UI; not started, no build order chosen yet.
+- [ ] Regenerate/refine loop — "make it shorter," "regenerate this paragraph," lock facts while regenerating other text. Extends the existing per-variation edit box into an actual AI-assisted refinement loop.
+- [ ] Post history upgrades — search, mark posted/saved, tags, one-click repurpose to a shorter version.
+- [ ] Thread/carousel generation from one screenshot — a short thread or carousel outline alongside the single post, distinct from the already-deferred Phase 4 multi-screenshot carousel.
+- Voice matching sample count (currently 2–3 onboarding samples, 3 used per prompt for token budget) — raising to 5–10 was floated but not decided; a tuning question, not new work.
 
 ### Pricing / voice matching v2
 - [ ] Multi-voice-profile support ("Founder me," "Investor me," "Personal me" — 3 profiles on paid, 1 on free). This is a real feature, not a config tweak: new schema (profiles need their own labeled sample sets), a profile selector in the generation workspace, free-vs-paid gating on profile count. Not started — worth nailing down the UX before building.
