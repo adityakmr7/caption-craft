@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-15 (screenshot-confirmation step — live-verified)
+**Last updated:** 2026-09-15 (Chrome extension backend + build — live-verified; native browser load still needed)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -35,8 +35,14 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 **Auth**
 - Google OAuth button restored on `/login` (code side only — see Remaining below for what's still needed to actually enable it)
 
-**Positioning**
-- Chrome-extension "coming later" teaser on the landing page (not built — see below)
+**Chrome extension** — reverses the earlier "keep it deferred" call, per explicit instruction this session
+- Scope: a "smart paste" helper only — insert a generated post into LinkedIn's compose box, no auto-posting, no scraping, no automatic action ever (only fires when the user clicks "Insert"). This is what the landing page's existing teaser already promised.
+- Built with WXT + React + TypeScript (confirmed via web search as the current best-maintained choice over Plasmo/CRXJS)
+- Auth: a personal access token generated at `/app/extension` (web-session authenticated, raw token shown once) and pasted into the extension popup — same pattern as GitHub/Vercel CLI tokens. New `extension_tokens` table, owner-scoped RLS, only the hash is stored.
+- `GET /api/extension/generations` (bearer-token authenticated) feeds the popup's post list
+- Content script targets LinkedIn's Quill-based compose box (`.ql-editor[contenteditable="true"]`) — inherently best-effort against undocumented DOM, documented as such in the code
+- **Live-verified end-to-end against production, except one step**: token generate → real API fetch with that token → correct data returned → revoke → confirmed 401 after revoke, all confirmed against real production data. **Not verified**: the actual Chrome "Load unpacked" flow and a real LinkedIn insertion — `chrome://extensions` is a browser-internal URL that automation is explicitly blocked from opening (a native OS file-picker dialog either way), so this one step needs to be done by hand. See "Remaining" below for exact steps.
+- Landing page's "Coming later" teaser is unchanged — building this doesn't include updating that copy to "available now" yet, since it's not installable from anywhere a user could reach without the extra manual load step
 
 **Voice matching (Phase 1.5)** — the signature differentiator from [PRD §7.1a](./docs/PRD.md)
 - Mandatory onboarding step (not a skippable toggle): a brand-new user pastes 2–3 of their own past LinkedIn posts before their first generation
@@ -60,6 +66,12 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 ---
 
 ## ⏳ Remaining
+
+### Chrome extension — one manual step to finish verifying
+- [ ] **Load the built extension into Chrome and test on real LinkedIn** — needs you: `cd extension && npm run build`, then `chrome://extensions` → enable Developer mode → **Load unpacked** → select `extension/.output/chrome-mv3/`. This is a native OS file-picker dialog, which browser automation is deliberately blocked from driving (`chrome://` URLs can't be opened by the automation tooling at all). Everything else — token issuing, the API the popup calls, revocation — is already verified against production.
+- [ ] Once loaded: generate a token at `/app/extension`, paste it into the popup, confirm your post list appears, then test "Insert" on an actual LinkedIn post/comment box and confirm the text lands correctly. Report back anything that breaks — the compose-box-finding logic in `extension/entrypoints/content.ts` is reverse-engineered from LinkedIn's DOM and is the one part of this that could genuinely not work first try.
+- [ ] Decide whether/when to update the landing page's "Coming later" Chrome extension teaser once it's actually usable by someone outside this session.
+- [ ] Chrome Web Store submission (icon assets, listing copy, review) — not started, a separate step from building it.
 
 ### Auth
 - [ ] **Actually enable Google sign-in** — code is wired (button + callback handling), but two things only the account owner can do remain: (1) get a Google OAuth client ID/secret from Google Cloud Console, (2) enable the Google provider in the Supabase Dashboard's Auth settings and paste them in. Deliberately not something I'll do myself even with credentials in hand — it's a security-relevant settings change, not a code change.
