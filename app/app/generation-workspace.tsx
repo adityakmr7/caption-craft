@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { Check, Clock, Copy, ImagePlus, Loader2, TriangleAlert, X } from "lucide-react";
+import { Check, Clock, Copy, ImagePlus, Loader2, Plus, TriangleAlert, X } from "lucide-react";
 import { analyzeHook, analyzeReadability } from "./text-analysis";
 import LinkedInPreview from "./linkedin-preview";
 
@@ -12,6 +12,17 @@ type Variation = {
   text: string;
   hashtags: string[];
 };
+
+// Mirrors app/lib/facts.ts's ExtractedFact shape. Defined locally rather
+// than imported from there so this client component doesn't pull zod
+// (used to build that module's extraction schema) into the browser bundle
+// for what's just a two-field type.
+type ExtractedFact = { label: string; value: string };
+// Kept in sync with MAX_FACTS in app/lib/facts.ts — the server silently
+// drops the whole facts array if it exceeds that cap (see /api/generate),
+// so letting the user add more here than the server accepts would mean
+// their extra facts vanish without explanation.
+const MAX_FACTS = 6;
 
 type GenerateResponse = {
   id: string;
@@ -212,7 +223,51 @@ export default function GenerationWorkspace({
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [remainingFree, setRemainingFree] = useState(initialRemainingFree);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [facts, setFacts] = useState<ExtractedFact[]>([]);
+  const [factsStatus, setFactsStatus] = useState<"idle" | "extracting" | "done" | "error">(
+    "idle"
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Screenshot-confirmation step: read the key facts out of the
+  // screenshot *before* generating, so the user can catch a misread
+  // number before it goes out in a post — the single biggest trust risk
+  // in a product whose whole pitch is "grounded in your real screenshot."
+  // Best-effort: a failed extraction never blocks generation, it just
+  // means the user sees no pre-filled facts and can add them manually or
+  // skip straight to generating, same as before this feature existed.
+  const extractFacts = async (f: File) => {
+    setFacts([]);
+    setFactsStatus("extracting");
+
+    const formData = new FormData();
+    formData.append("screenshot", f);
+
+    try {
+      const res = await fetch("/api/extract-facts", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(data?.facts)) {
+        setFactsStatus("error");
+        return;
+      }
+      setFacts(data.facts);
+      setFactsStatus("done");
+    } catch {
+      setFactsStatus("error");
+    }
+  };
+
+  const updateFact = (index: number, key: "label" | "value", value: string) => {
+    setFacts((prev) => prev.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
+  };
+
+  const addFact = () => {
+    setFacts((prev) => (prev.length >= MAX_FACTS ? prev : [...prev, { label: "", value: "" }]));
+  };
+
+  const removeFact = (index: number) => {
+    setFacts((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const pickFile = (f: File | null) => {
     if (!f) return;
@@ -227,6 +282,7 @@ export default function GenerationWorkspace({
     setError(null);
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
+    extractFacts(f);
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -249,6 +305,12 @@ export default function GenerationWorkspace({
     formData.append("screenshot", file);
     formData.append("tone", tone);
     formData.append("postType", postType);
+    // Only send facts the user actually filled in — an empty row added
+    // via "+ Add a fact" and left blank shouldn't be sent as a fact.
+    const confirmedFacts = facts.filter((f) => f.label.trim() && f.value.trim());
+    if (confirmedFacts.length > 0) {
+      formData.append("facts", JSON.stringify(confirmedFacts));
+    }
 
     try {
       const res = await fetch("/api/generate", { method: "POST", body: formData });
@@ -292,6 +354,8 @@ export default function GenerationWorkspace({
     setSelectedIndex(null);
     setError(null);
     setStatus("idle");
+    setFacts([]);
+    setFactsStatus("idle");
   };
 
   return (
@@ -348,6 +412,68 @@ export default function GenerationWorkspace({
               </>
             )}
           </div>
+
+          {file && (
+            <div className="cc-card p-4 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-[var(--text-3)]">
+                  {factsStatus === "extracting"
+                    ? "Reading your screenshot..."
+                    : "What we read from your screenshot — check it's right"}
+                </p>
+                {factsStatus === "extracting" && (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--text-3)]" />
+                )}
+              </div>
+
+              {factsStatus === "error" && (
+                <p className="text-xs text-[var(--text-3)]">
+                  Couldn&apos;t read this screenshot automatically. Add the key numbers
+                  yourself so the post gets them right — optional, you can still generate
+                  without them.
+                </p>
+              )}
+
+              {factsStatus !== "extracting" && (
+                <div className="flex flex-col gap-2">
+                  {facts.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        value={f.label}
+                        onChange={(e) => updateFact(i, "label", e.target.value)}
+                        placeholder="Label"
+                        className="w-28 shrink-0 rounded-[0.5rem] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[var(--text-2)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] focus:ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                      />
+                      <input
+                        value={f.value}
+                        onChange={(e) => updateFact(i, "value", e.target.value)}
+                        placeholder="Value"
+                        className="flex-1 min-w-0 rounded-[0.5rem] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] focus:ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFact(i)}
+                        title="Remove"
+                        className="shrink-0 text-[var(--text-3)] hover:text-red-400 transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ))}
+                  {facts.length < MAX_FACTS && (
+                    <button
+                      type="button"
+                      onClick={addFact}
+                      className="inline-flex items-center gap-1 self-start text-xs text-[var(--accent)] hover:underline"
+                    >
+                      <Plus className="h-3 w-3" strokeWidth={2.5} />
+                      Add a fact to check
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold text-[var(--text-3)] mb-2">Post type</p>
