@@ -48,6 +48,33 @@ type Database = {
         Update: never;
         Relationships: [];
       };
+      extension_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          token_hash: string;
+          label: string | null;
+          created_at: string;
+          last_used_at: string | null;
+        };
+        Insert: { user_id: string; token_hash: string; label?: string | null };
+        Update: Partial<{ last_used_at: string | null }>;
+        Relationships: [];
+      };
+      generations: {
+        Row: {
+          id: string;
+          user_id: string;
+          tone: string;
+          post_type: string | null;
+          variations: { text: string; hashtags: string[] }[];
+          selected_variation: number | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
