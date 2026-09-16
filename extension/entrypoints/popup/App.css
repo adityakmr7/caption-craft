@@ -80,6 +80,23 @@
   cursor: not-allowed;
 }
 
+.cc-button-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  text-align: center;
+}
+
+.cc-summary {
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.cc-manual-connect {
+  margin-top: 8px;
+}
+
 .cc-button:not(:disabled):hover {
   filter: brightness(1.08);
 }
