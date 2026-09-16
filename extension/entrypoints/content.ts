@@ -1,10 +1,11 @@
 // Smart-paste helper: inserts a CaptionCraft post into LinkedIn's compose
-// box on request from the popup. Deliberately does nothing else — never
-// reads LinkedIn's page content, never clicks Post, never runs
+// box on request from the side panel. Deliberately does nothing else —
+// never reads LinkedIn's page content, never clicks Post, never runs
 // automatically. It only acts when the user explicitly clicks "Insert"
-// in the extension popup, which is functionally the same as the user
-// pasting their own clipboard content — not automated posting, which is
-// the LinkedIn ToS risk this extension is designed to stay well clear of.
+// in the extension's side panel, which is functionally the same as the
+// user pasting their own clipboard content — not automated posting,
+// which is the LinkedIn ToS risk this extension is designed to stay well
+// clear of.
 
 interface InsertPostMessage {
   type: "CAPTIONCRAFT_INSERT_POST";

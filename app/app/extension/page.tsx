@@ -15,8 +15,8 @@ export default async function ExtensionPage({
   const user = await getUser();
   if (!user) {
     // Preserve `connect=1` across the login redirect so a user arriving
-    // from the extension's popup (not yet signed in) lands back here and
-    // connects automatically, instead of needing a second visit/click.
+    // from the extension's side panel (not yet signed in) lands back here
+    // and connects automatically, instead of needing a second visit/click.
     const next = autoConnect ? "/app/extension?connect=1" : "/app/extension";
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }

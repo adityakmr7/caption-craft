@@ -1,5 +1,5 @@
-// Base URL for the CaptionCraft backend the popup talks to. Extension
-// pages (popup/background) bypass CORS for origins declared in
+// Base URL for the CaptionCraft backend the side panel talks to. Extension
+// pages (side panel/background) bypass CORS for origins declared in
 // wxt.config.ts's host_permissions, so no server-side CORS changes are
 // needed for this to work against either target.
 const API_BASE_URL = "https://captioncraft.xyz";
