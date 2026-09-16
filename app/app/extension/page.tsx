@@ -4,10 +4,21 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/app/lib/supabase/server";
 import ExtensionTokens from "./extension-tokens";
 
-export default async function ExtensionPage() {
+export default async function ExtensionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ connect?: string }>;
+}) {
+  const { connect } = await searchParams;
+  const autoConnect = connect === "1";
+
   const user = await getUser();
   if (!user) {
-    redirect("/login?next=/app/extension");
+    // Preserve `connect=1` across the login redirect so a user arriving
+    // from the extension's popup (not yet signed in) lands back here and
+    // connects automatically, instead of needing a second visit/click.
+    const next = autoConnect ? "/app/extension?connect=1" : "/app/extension";
+    redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
   return (
@@ -31,7 +42,7 @@ export default async function ExtensionPage() {
           </p>
         </div>
 
-        <ExtensionTokens />
+        <ExtensionTokens autoConnect={autoConnect} />
       </div>
     </div>
   );
