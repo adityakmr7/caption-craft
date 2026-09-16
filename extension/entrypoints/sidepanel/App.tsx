@@ -15,6 +15,33 @@ type View =
   | { status: "ready"; generations: Generation[] }
   | { status: "error"; message: string };
 
+// What the active tab looks like right now, from the LinkedIn content
+// script's point of view — checked proactively (a "ping") rather than only
+// discovered after a failed Insert. Without this, every failure looked
+// identical regardless of cause: wrong tab, extension not injected on this
+// tab yet (needs a refresh), or simply no compose box open yet — three very
+// different fixes that all produced the same unhelpful error before.
+type TargetStatus =
+  | "checking"
+  | "no-tab"
+  | "not-linkedin"
+  | "no-content-script"
+  | "no-compose-box"
+  | "ready";
+
+const TARGET_POLL_MS = 2000;
+
+// Only the non-"ready" statuses need copy — "ready" and "checking" render
+// their own (minimal/no) banner directly.
+const TARGET_STATUS_COPY: Partial<Record<TargetStatus, string>> = {
+  "no-tab": "Switch to your LinkedIn tab, then come back here.",
+  "not-linkedin": "Switch to your LinkedIn tab, then come back here.",
+  "no-content-script":
+    "CaptionCraft isn't active on that tab yet — refresh the LinkedIn tab and try again.",
+  "no-compose-box":
+    'Open a LinkedIn post ("Start a post") or click into a comment box to enable Insert.',
+};
+
 const EMPTY_VARIATION: Variation = { text: "", hashtags: [] };
 
 // Generations always have 3 variations per the /api/generate schema, but
@@ -37,6 +64,7 @@ export default function App() {
   const [insertStatus, setInsertStatus] = useState<Record<string, "inserting" | "done" | "failed">>(
     {}
   );
+  const [targetStatus, setTargetStatus] = useState<TargetStatus>("checking");
 
   const load = async () => {
     const token = await getStoredToken();
@@ -88,6 +116,41 @@ export default function App() {
     return () => browser.storage.onChanged.removeListener(listener);
   }, []);
 
+  // Proactively checks whether Insert would actually work right now,
+  // instead of the user only finding out after clicking it.
+  const checkTarget = async (): Promise<TargetStatus> => {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return "no-tab";
+    if (!tab.url?.includes("linkedin.com")) return "not-linkedin";
+    try {
+      const response = await browser.tabs.sendMessage(tab.id, { type: "CAPTIONCRAFT_PING" });
+      if (!response?.ok) return "no-content-script";
+      return response.hasComposeBox ? "ready" : "no-compose-box";
+    } catch {
+      // No listener on that tab — almost always means the extension was
+      // installed/reloaded after this LinkedIn tab was opened, and it
+      // hasn't been refreshed since.
+      return "no-content-script";
+    }
+  };
+
+  useEffect(() => {
+    if (view.status !== "ready") return;
+    let cancelled = false;
+
+    const poll = async () => {
+      const status = await checkTarget();
+      if (!cancelled) setTargetStatus(status);
+    };
+
+    poll();
+    const interval = setInterval(poll, TARGET_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [view.status]);
+
   const handleConnect = async () => {
     const trimmed = tokenInput.trim();
     if (!trimmed) return;
@@ -108,7 +171,13 @@ export default function App() {
     setInsertStatus((s) => ({ ...s, [g.id]: "inserting" }));
 
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url?.includes("linkedin.com")) {
+    if (!tab?.id) {
+      setTargetStatus("no-tab");
+      setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
+      return;
+    }
+    if (!tab.url?.includes("linkedin.com")) {
+      setTargetStatus("not-linkedin");
       setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
       return;
     }
@@ -118,11 +187,18 @@ export default function App() {
         type: "CAPTIONCRAFT_INSERT_POST",
         text: fullPostText(g),
       });
-      setInsertStatus((s) => ({ ...s, [g.id]: response?.ok ? "done" : "failed" }));
+      if (response?.ok) {
+        setTargetStatus("ready");
+        setInsertStatus((s) => ({ ...s, [g.id]: "done" }));
+      } else {
+        setTargetStatus("no-compose-box");
+        setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
+      }
     } catch {
       // No content script listening — most often means the LinkedIn tab
       // was open before the extension was installed/reloaded and hasn't
       // been refreshed yet.
+      setTargetStatus("no-content-script");
       setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
     }
   };
@@ -194,6 +270,11 @@ export default function App() {
 
       {view.status === "ready" && (
         <div className="cc-list">
+          {TARGET_STATUS_COPY[targetStatus] && (
+            <p className="cc-hint" role="status">
+              {TARGET_STATUS_COPY[targetStatus]}
+            </p>
+          )}
           {view.generations.length === 0 && (
             <p className="cc-muted">
               No posts yet — generate one on captioncraft.xyz first.
@@ -222,7 +303,7 @@ export default function App() {
                 </div>
                 {status === "failed" && (
                   <p className="cc-error cc-error-small">
-                    Open a LinkedIn post/comment box, click into it, then try again.
+                    Didn&apos;t insert — see the notice above.
                   </p>
                 )}
               </div>
