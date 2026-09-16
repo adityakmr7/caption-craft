@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-17 (Waitlist gate removed — full public launch. Also: extension login-redirect now auto-connects.)
+**Last updated:** 2026-09-17 (Chrome extension now opens as a side panel, not a popup — see PR #23. Also: waitlist gate removed, extension login-redirect auto-connects.)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -16,6 +16,7 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 - Landing page — every CTA now goes straight to sign-up (`/login?mode=sign-up`); the waitlist gate is removed (2026-09-17, full public launch — `app/api/waitlist` deleted, `WaitlistCTA` replaced with a direct-signup `FinalCTA`). The `waitlist` Supabase table itself (real captured pre-launch emails) is untouched — dropping it is a data-loss action I won't do without being asked explicitly.
 - Auth — Supabase email/password sign-up/sign-in, `/login?mode=sign-up` deep-links straight into the create-account form
 - Chrome extension's "Connect account" link now carries through the login redirect and auto-connects once signed in — no second click needed after logging in (2026-09-16)
+- Chrome extension opens as a **side panel** (`chrome.sidePanel`), not a toolbar popup (2026-09-17, per explicit feedback: "why caption craft extension is not coming as sidebar but as pop"). A popup closes the instant it loses focus, which was exactly wrong for a tool meant to be used while LinkedIn's compose box is focused — the side panel stays open alongside the page instead. Same UI/logic, `entrypoints/popup/` → `entrypoints/sidepanel/`, new minimal `entrypoints/background.ts` whose only job is `setPanelBehavior({ openPanelOnActionClick: true })`. See PR #23.
 - Screenshot upload (drag-drop/paste/browse) → Gemini 2.5 Flash → 3 LinkedIn post variations + hashtags
 - Post type templates (Milestone / Lesson / Contrarian / Data)
 - Tone selector (Professional / Casual / Hype)
@@ -72,8 +73,8 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 ## ⏳ Remaining
 
 ### Chrome extension — one manual step to finish verifying
-- [ ] **Load the built extension into Chrome and test on real LinkedIn** — needs you: `cd extension && npm run build`, then `chrome://extensions` → enable Developer mode → **Load unpacked** → select `extension/.output/chrome-mv3/`. This is a native OS file-picker dialog, which browser automation is deliberately blocked from driving (`chrome://` URLs can't be opened by the automation tooling at all). Everything else — token issuing, the API the popup calls, revocation, and the one-click connect handshake's web-app side — is already verified against production.
-- [ ] Once loaded: click "Connect account →" in the popup (opens `/app/extension`), click "Connect extension" there, and confirm the popup flips to showing your post list automatically — no copy-paste needed. Then test "Insert" on an actual LinkedIn post/comment box and confirm the text lands correctly. Report back anything that breaks — both the connect handshake's extension-side content script and the compose-box-finding logic in `extension/entrypoints/content.ts` (reverse-engineered from LinkedIn's DOM) are the two parts of this that could genuinely not work first try.
+- [ ] **Reload the extension and test on real LinkedIn** — needs you: `cd extension && npm run build` (already done as of this update), then `chrome://extensions` → click the reload icon on the CaptionCraft card (or **Load unpacked** → select `extension/.output/chrome-mv3/` if not loaded yet) → **refresh any already-open LinkedIn tabs** (a tab open since before a reload keeps running the old content script — this is almost certainly why "Insert" appeared to still fail after the compose-box fix in PR #20). This whole cycle is a native OS flow browser automation is deliberately blocked from driving. Everything else — token issuing, the API the side panel calls, revocation, and the one-click connect handshake's web-app side — is already verified against production.
+- [ ] Once reloaded: click the toolbar icon and confirm it opens as a **side panel** (not a popup) — this is new as of PR #23. Click "Connect account →" (opens `/app/extension`), click "Connect extension" there, and confirm the side panel flips to showing your post list automatically. Then test "Insert" on an actual LinkedIn post/comment box and confirm the text lands correctly. Report back anything that breaks — both the connect handshake's extension-side content script and the compose-box-finding logic in `extension/entrypoints/content.ts` (reverse-engineered from LinkedIn's DOM) are the parts of this that could genuinely not work first try.
 - [ ] Decide whether/when to update the landing page's "Coming later" Chrome extension teaser once it's actually usable by someone outside this session.
 - [ ] Chrome Web Store submission (icon assets, listing copy, review) — not started, a separate step from building it.
 
