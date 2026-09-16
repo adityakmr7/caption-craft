@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 // Session-aware server client: reads the signed-in user's session from
 // cookies and respects Row Level Security. Use this in Server Components,
 // Server Actions, and Route Handlers. For privileged writes that must
-// bypass RLS (e.g. the waitlist insert), use app/lib/supabase/admin.ts
-// instead.
+// bypass RLS (e.g. the extension-token bearer-auth routes, which have no
+// user session to scope against), use app/lib/supabase/admin.ts instead.
 
 export async function createClient() {
   const cookieStore = await cookies();

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowDown,
   ArrowRight,
   Check,
-  CheckCircle2,
   ClipboardCheck,
   Hash,
   History,
@@ -17,6 +16,10 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+
+// Full public launch (no more waitlist gate) — every CTA on the landing
+// page sends straight to sign-up.
+const SIGNUP_HREF = "/login?mode=sign-up";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -168,10 +171,10 @@ function Navbar() {
             Log in
           </a>
           <a
-            href="#waitlist"
+            href={SIGNUP_HREF}
             className="btn-primary inline-flex items-center px-5 py-2.5 text-sm font-semibold whitespace-nowrap"
           >
-            Join waitlist
+            Get started free
           </a>
         </div>
 
@@ -214,11 +217,11 @@ function Navbar() {
                 Log in
               </a>
               <a
-                href="#waitlist"
+                href={SIGNUP_HREF}
                 onClick={() => setMobileOpen(false)}
                 className="btn-primary inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold"
               >
-                Join waitlist
+                Get started free
               </a>
             </div>
           </motion.div>
@@ -354,10 +357,10 @@ function Hero() {
             className="mb-10 flex flex-col sm:flex-row gap-4"
           >
             <a
-              href="#waitlist"
+              href={SIGNUP_HREF}
               className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold whitespace-nowrap"
             >
-              Join the waitlist
+              Get started free
               <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
             </a>
             <a
@@ -706,12 +709,12 @@ function Pricing() {
                 ))}
               </ul>
               <a
-                href="#waitlist"
+                href={SIGNUP_HREF}
                 className={`inline-flex items-center justify-center px-5 py-3 text-sm font-semibold whitespace-nowrap ${
                   p.highlight ? "btn-primary" : "btn-ghost"
                 }`}
               >
-                Join waitlist for early access
+                Get started
               </a>
             </RevealItem>
           ))}
@@ -801,116 +804,28 @@ function FAQ() {
   );
 }
 
-/* ---------- waitlist cta ---------- */
+/* ---------- final cta ---------- */
 
-function WaitlistCTA() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">(
-    "idle",
-  );
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!email.trim() || status === "submitting") return;
-
-    setStatus("submitting");
-    setErrorMessage("");
-
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setErrorMessage(data?.error || "Something went wrong. Please try again.");
-        setStatus("error");
-        return;
-      }
-
-      setStatus("success");
-    } catch {
-      setErrorMessage("Network error. Please try again.");
-      setStatus("error");
-    }
-  };
-
+function FinalCTA() {
   return (
-    <section id="waitlist" className="py-20">
+    <section className="py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <Reveal className="cc-card mx-auto max-w-3xl p-10 text-center md:p-16">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold tracking-tight text-[var(--text-1)]">
             Your next milestone deserves more than a blank cursor.
           </h2>
           <p className="mx-auto mb-8 max-w-[50ch] text-[var(--text-2)]">
-            Join the waitlist for early access. No spam, just a note when we
-            launch — this September.
+            Free to start, no card required. Upload a screenshot and get 3
+            ready-to-post variations in under a minute.
           </p>
 
-          <div className="mx-auto mb-6 min-h-[52px] max-w-md">
-            <AnimatePresence mode="wait">
-              {status !== "success" ? (
-                <motion.form
-                  key="form"
-                  onSubmit={handleSubmit}
-                  exit={{ opacity: 0, y: -10 }}
-                  noValidate
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <label htmlFor="waitlist-email" className="sr-only">
-                      Email address
-                    </label>
-                    <input
-                      id="waitlist-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      aria-invalid={status === "error"}
-                      aria-describedby={
-                        status === "error" ? "waitlist-email-error" : undefined
-                      }
-                      className={`flex-1 rounded-[0.625rem] border bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 ${
-                        status === "error"
-                          ? "border-red-400/40 focus:border-red-400/50 focus:ring-red-400/40"
-                          : "border-[var(--border)] focus:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] focus:ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
-                      }`}
-                    />
-                    <button
-                      type="submit"
-                      disabled={status === "submitting"}
-                      className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap px-6 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {status === "submitting" ? "Joining..." : "Join waitlist"}
-                      <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                  {status === "error" && (
-                    <p
-                      id="waitlist-email-error"
-                      className="mt-2 text-left text-sm text-red-400"
-                    >
-                      {errorMessage}
-                    </p>
-                  )}
-                </motion.form>
-              ) : (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-center gap-2 font-medium text-[var(--success)]"
-                >
-                  <CheckCircle2 className="h-5 w-5" strokeWidth={2.5} />
-                  You&apos;re on the list!
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <a
+            href={SIGNUP_HREF}
+            className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap px-6 py-3.5 text-sm font-semibold"
+          >
+            Get started free
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+          </a>
         </Reveal>
       </div>
     </section>
@@ -962,7 +877,7 @@ export default function CaptionCraftLanding() {
         <Pricing />
         <FounderNote />
         <FAQ />
-        <WaitlistCTA />
+        <FinalCTA />
       </main>
       <Footer />
     </div>

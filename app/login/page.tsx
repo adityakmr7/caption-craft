@@ -14,8 +14,11 @@ function LoginForm() {
   // Set by app/auth/callback/route.ts when the OAuth code exchange fails
   // (e.g. a Google sign-in that errors out or gets cancelled).
   const authError = searchParams.get("error");
+  // Landing-page CTAs link here with ?mode=sign-up so a new visitor lands
+  // straight in the create-account form instead of sign-in.
+  const initialMode: Mode = searchParams.get("mode") === "sign-up" ? "sign-up" : "sign-in";
 
-  const [mode, setMode] = useState<Mode>("sign-in");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting">("idle");

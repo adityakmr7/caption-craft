@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-16 (Chrome extension: fixed "Insert does nothing" on real LinkedIn — compose box selector was targeting a framework LinkedIn no longer uses)
+**Last updated:** 2026-09-17 (Waitlist gate removed — full public launch. Also: extension login-redirect now auto-connects.)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -13,8 +13,9 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 ## ✅ Shipped (live in production)
 
 **Core product**
-- Landing page + waitlist capture (`app/api/waitlist`)
-- Auth — Supabase email/password sign-up/sign-in
+- Landing page — every CTA now goes straight to sign-up (`/login?mode=sign-up`); the waitlist gate is removed (2026-09-17, full public launch — `app/api/waitlist` deleted, `WaitlistCTA` replaced with a direct-signup `FinalCTA`). The `waitlist` Supabase table itself (real captured pre-launch emails) is untouched — dropping it is a data-loss action I won't do without being asked explicitly.
+- Auth — Supabase email/password sign-up/sign-in, `/login?mode=sign-up` deep-links straight into the create-account form
+- Chrome extension's "Connect account" link now carries through the login redirect and auto-connects once signed in — no second click needed after logging in (2026-09-16)
 - Screenshot upload (drag-drop/paste/browse) → Gemini 2.5 Flash → 3 LinkedIn post variations + hashtags
 - Post type templates (Milestone / Lesson / Contrarian / Data)
 - Tone selector (Professional / Casual / Hype)
