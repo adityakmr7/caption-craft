@@ -153,8 +153,8 @@ export default function App() {
             Connect account →
           </a>
           <p className="cc-muted">
-            Opens captioncraft.xyz — click &quot;Connect extension&quot; there and
-            come back.
+            Opens captioncraft.xyz — sign in if you need to, and it connects
+            automatically.
           </p>
           <details>
             <summary className="cc-link cc-summary">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Check, Copy, Loader2, Trash2 } from "lucide-react";
 
 type TokenRow = {
@@ -29,7 +30,9 @@ const CONNECT_TIMEOUT_MS = 2500;
 // Either way the raw token is only ever shown once, in the response to
 // the create call — after that it's gone from the server for good,
 // matching how GitHub/Vercel personal access tokens work.
-export default function ExtensionTokens() {
+export default function ExtensionTokens({ autoConnect = false }: { autoConnect?: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
@@ -37,11 +40,11 @@ export default function ExtensionTokens() {
   const [error, setError] = useState<string | null>(null);
   const [connectStatus, setConnectStatus] = useState<ConnectStatus>("idle");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const res = await fetch("/api/extension/tokens");
     const data = await res.json().catch(() => ({}));
     if (res.ok) setTokens(data.tokens ?? []);
-  };
+  }, []);
 
   useEffect(() => {
     // Standard fetch-on-mount shape: an ignore flag means a setState
@@ -54,7 +57,7 @@ export default function ExtensionTokens() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     // Listens for the extension's ack after the one-click connect flow
@@ -80,8 +83,10 @@ export default function ExtensionTokens() {
     return () => clearTimeout(timer);
   }, [connectStatus]);
 
-  // Shared by both the one-click and manual-paste flows below.
-  const mintToken = async (): Promise<string | null> => {
+  // Shared by both the one-click and manual-paste flows below. Memoized so
+  // the auto-connect effect below can depend on it without re-firing on
+  // every render.
+  const mintToken = useCallback(async (): Promise<string | null> => {
     try {
       const res = await fetch("/api/extension/tokens", {
         method: "POST",
@@ -99,9 +104,9 @@ export default function ExtensionTokens() {
       setError("Network error. Try again.");
       return null;
     }
-  };
+  }, [load]);
 
-  const handleConnectExtension = async () => {
+  const handleConnectExtension = useCallback(async () => {
     setError(null);
     setConnectStatus("waiting");
     const token = await mintToken();
@@ -116,7 +121,22 @@ export default function ExtensionTokens() {
     // Kept around only as the manual-copy fallback if the handshake
     // above times out with no ack from the extension.
     setNewToken(token);
-  };
+  }, [mintToken]);
+
+  // Arriving here with ?connect=1 (from the extension popup's "Connect
+  // account" link, possibly round-tripped through a login redirect — see
+  // app/app/extension/page.tsx) means the user already expressed intent
+  // to connect by clicking that link; skip the extra "Connect extension"
+  // click and fire the same flow automatically, once.
+  const autoConnectFired = useRef(false);
+  useEffect(() => {
+    if (!autoConnect || autoConnectFired.current) return;
+    autoConnectFired.current = true;
+    // Strip the query param immediately so a later manual refresh of this
+    // page doesn't silently mint another token.
+    router.replace(pathname);
+    handleConnectExtension();
+  }, [autoConnect, handleConnectExtension, pathname, router]);
 
   const handleCreate = async () => {
     setCreating(true);
