@@ -30,24 +30,35 @@ function isInsertPostMessage(message: unknown): message is InsertPostMessage {
   );
 }
 
-// LinkedIn's post, comment, and message editors are all built on Quill,
-// whose editable surface is `.ql-editor[contenteditable="true"]` — there
-// is no documented, stable way to tell which one is "the post composer"
-// from the outside, so this is inherently best-effort against
-// undocumented DOM that LinkedIn can change at any time:
+// LinkedIn's post, comment, and message editors are NOT one shared
+// implementation — as of 2026-09, the post composer runs on Tiptap/
+// ProseMirror (`class="tiptap ProseMirror ..."`) while the messaging
+// compose box has its own custom class (`msg-form__contenteditable`);
+// neither is Quill, despite this file originally assuming `.ql-editor`
+// (confirmed live: that selector currently matches nothing on
+// linkedin.com, which is why "Insert" silently did nothing). There is
+// no documented, stable way to tell which editor is "the post
+// composer" from the outside, so this is inherently best-effort
+// against undocumented, changeable DOM — the one thing every editor
+// surface observed so far has in common is the standard ARIA textbox
+// contract (`contenteditable="true"` + `role="textbox"`), which is
+// what this targets instead of any one framework's CSS classes:
 //  1. Prefer whichever editor currently has focus (the user's own click
 //     into the box they want text inserted into).
 //  2. Otherwise fall back to the largest visible editor on the page —
 //     the main post composer is reliably taller than a comment or
 //     message box.
+const EDITABLE_SELECTOR =
+  '[contenteditable="true"][role="textbox"], .ql-editor[contenteditable="true"]';
+
 function findComposeBox(): HTMLElement | null {
   const active = document.activeElement as HTMLElement | null;
-  if (active?.matches?.('.ql-editor[contenteditable="true"]')) {
+  if (active?.matches?.(EDITABLE_SELECTOR)) {
     return active;
   }
 
   const candidates = Array.from(
-    document.querySelectorAll<HTMLElement>('.ql-editor[contenteditable="true"]')
+    document.querySelectorAll<HTMLElement>(EDITABLE_SELECTOR)
   ).filter((el) => el.offsetParent !== null);
 
   if (candidates.length === 0) return null;
