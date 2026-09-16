@@ -6,7 +6,7 @@ import {
   type Generation,
   type Variation,
 } from "./api";
-import { clearStoredToken, getStoredToken, setStoredToken } from "./storage";
+import { clearStoredToken, getStoredToken, setStoredToken, TOKEN_STORAGE_KEY } from "@/utils/storage";
 import "./App.css";
 
 type View =
@@ -60,7 +60,30 @@ export default function App() {
   };
 
   useEffect(() => {
-    load();
+    let ignore = false;
+    (async () => {
+      if (!ignore) await load();
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Picks up a token the moment the one-click "Connect extension" flow
+    // on the settings page finishes (see connect.content.ts) — without
+    // this, a popup already open during that handshake would keep
+    // showing "not connected" until closed and reopened.
+    const listener = (
+      changes: Record<string, { newValue?: unknown; oldValue?: unknown }>,
+      areaName: string
+    ) => {
+      if (areaName === "local" && TOKEN_STORAGE_KEY in changes) {
+        load();
+      }
+    };
+    browser.storage.onChanged.addListener(listener);
+    return () => browser.storage.onChanged.removeListener(listener);
   }, []);
 
   const handleConnect = async () => {
@@ -118,33 +141,43 @@ export default function App() {
       {view.status === "connect" && (
         <div className="cc-connect">
           <p className="cc-body">
-            Paste a personal access token from your CaptionCraft account to see your
-            recent posts here.
+            Connect your CaptionCraft account to see your recent posts here.
           </p>
           {view.error && <p className="cc-error">{view.error}</p>}
-          <input
-            type="password"
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            placeholder="cc_..."
-            className="cc-input"
-          />
-          <button
-            type="button"
-            className="cc-button"
-            disabled={!tokenInput.trim() || connecting}
-            onClick={handleConnect}
-          >
-            {connecting ? "Connecting…" : "Connect"}
-          </button>
           <a
             href={tokenSettingsUrl()}
             target="_blank"
             rel="noreferrer"
-            className="cc-link"
+            className="cc-button cc-button-link"
           >
-            Get a token →
+            Connect account →
           </a>
+          <p className="cc-muted">
+            Opens captioncraft.xyz — click &quot;Connect extension&quot; there and
+            come back.
+          </p>
+          <details>
+            <summary className="cc-link cc-summary">
+              Paste a token manually instead
+            </summary>
+            <div className="cc-connect cc-manual-connect">
+              <input
+                type="password"
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                placeholder="cc_..."
+                className="cc-input"
+              />
+              <button
+                type="button"
+                className="cc-button"
+                disabled={!tokenInput.trim() || connecting}
+                onClick={handleConnect}
+              >
+                {connecting ? "Connecting…" : "Connect"}
+              </button>
+            </div>
+          </details>
         </div>
       )}
 

@@ -32,13 +32,21 @@ npm run zip         # zips it for a Chrome Web Store upload
 2. Chrome → `chrome://extensions` → enable Developer mode → **Load unpacked**
 3. Select `.output/chrome-mv3/`
 
-## Getting a token
+## Connecting an account
 
 The extension authenticates with a personal access token (not a shared
-session cookie) — generate one at `/app/extension` on the web app while
-signed in, then paste it into the extension's popup. See
-`app/lib/extension-auth.ts` in the repo root for how these are issued
-and verified.
+session cookie) — see `app/lib/extension-auth.ts` in the repo root for
+how these are issued and verified. Two ways to connect:
+
+1. **One click** (default): in the popup, click "Connect account" — it
+   opens `/app/extension` on the web app. Click "Connect extension"
+   there and the token is handed to the extension automatically via a
+   `window.postMessage` handshake with the connect content script (see
+   `entrypoints/connect.content.ts`). No copying, no pasting.
+2. **Manual paste** (fallback, for when the extension isn't detected —
+   not installed yet, wrong browser/profile, or the content script
+   hasn't loaded): generate a token on the same settings page and paste
+   it into the popup's "Paste a token manually instead" field.
 
 ## Architecture notes
 
@@ -52,5 +60,13 @@ and verified.
   against LinkedIn's undocumented, changeable DOM — see the comments in
   that file for the exact heuristic and why `execCommand("insertText")`
   is used instead of directly mutating the DOM.
+- `entrypoints/connect.content.ts` — runs only on `/app/extension*` on
+  captioncraft.xyz (and localhost, for dev). Implements the one-click
+  connect handshake: receives a token via `window.postMessage` from the
+  settings page, validates its origin/shape, stores it, and posts back
+  an acknowledgment. Never runs on LinkedIn or anywhere else.
+- `utils/storage.ts` — shared `chrome.storage.local` helpers for the
+  extension's token, used by both the popup and the connect content
+  script.
 - No `background.ts` — the popup calls the API and messages the content
   script directly; there was no need for a persistent service worker.

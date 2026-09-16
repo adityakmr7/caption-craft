@@ -26,8 +26,8 @@ export default async function ExtensionPage() {
           <p className="text-sm text-[var(--text-3)] max-w-[52ch]">
             Insert a generated post into LinkedIn&apos;s compose box without
             switching tabs. The extension never posts on your behalf — you
-            still review and click Post yourself. Generate a token below,
-            then paste it into the extension&apos;s popup to connect it.
+            still review and click Post yourself. Click &quot;Connect
+            extension&quot; below to connect it in one step.
           </p>
         </div>
 

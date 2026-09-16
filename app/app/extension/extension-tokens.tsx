@@ -10,16 +10,32 @@ type TokenRow = {
   last_used_at: string | null;
 };
 
+type ConnectStatus = "idle" | "waiting" | "connected" | "timeout";
+
+const CONNECT_TIMEOUT_MS = 2500;
+
 // Token management for the Chrome extension's "smart paste" helper (see
-// app/lib/extension-auth.ts). The raw token is only ever shown once, in
-// the response to the create call below — after that it's gone from the
-// server for good, matching how GitHub/Vercel personal access tokens work.
+// app/lib/extension-auth.ts). Two ways to hand a token to the extension:
+//
+//  1. One click ("Connect extension"): mints a token and hands it
+//     straight to the extension via window.postMessage. The extension's
+//     connect content script (extension/entrypoints/connect.content.ts)
+//     — which only runs on this exact page — listens for it, stores it,
+//     and posts back an acknowledgment. No copying, no pasting.
+//  2. Manual paste, kept as a fallback for when the extension isn't
+//     detected (not installed yet, wrong browser/profile, or the content
+//     script hasn't loaded) — same as before this flow existed.
+//
+// Either way the raw token is only ever shown once, in the response to
+// the create call — after that it's gone from the server for good,
+// matching how GitHub/Vercel personal access tokens work.
 export default function ExtensionTokens() {
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectStatus, setConnectStatus] = useState<ConnectStatus>("idle");
 
   const load = async () => {
     const res = await fetch("/api/extension/tokens");
@@ -40,9 +56,32 @@ export default function ExtensionTokens() {
     };
   }, []);
 
-  const handleCreate = async () => {
-    setCreating(true);
-    setError(null);
+  useEffect(() => {
+    // Listens for the extension's ack after the one-click connect flow
+    // below hands it a token — see connect.content.ts for the other side
+    // of this handshake. Origin- and shape-checked before trusting it.
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.source === "captioncraft-extension" && event.data?.type === "CAPTIONCRAFT_CONNECTED") {
+        setConnectStatus("connected");
+        setNewToken(null);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  useEffect(() => {
+    if (connectStatus !== "waiting") return;
+    const timer = setTimeout(() => {
+      setConnectStatus((s) => (s === "waiting" ? "timeout" : s));
+    }, CONNECT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [connectStatus]);
+
+  // Shared by both the one-click and manual-paste flows below.
+  const mintToken = async (): Promise<string | null> => {
     try {
       const res = await fetch("/api/extension/tokens", {
         method: "POST",
@@ -52,15 +91,39 @@ export default function ExtensionTokens() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || "Couldn't create a token.");
-        return;
+        return null;
       }
-      setNewToken(data.token);
       await load();
+      return data.token as string;
     } catch {
       setError("Network error. Try again.");
-    } finally {
-      setCreating(false);
+      return null;
     }
+  };
+
+  const handleConnectExtension = async () => {
+    setError(null);
+    setConnectStatus("waiting");
+    const token = await mintToken();
+    if (!token) {
+      setConnectStatus("idle");
+      return;
+    }
+    window.postMessage(
+      { source: "captioncraft-web", type: "CAPTIONCRAFT_CONNECT_TOKEN", token },
+      window.location.origin
+    );
+    // Kept around only as the manual-copy fallback if the handshake
+    // above times out with no ack from the extension.
+    setNewToken(token);
+  };
+
+  const handleCreate = async () => {
+    setCreating(true);
+    setError(null);
+    const token = await mintToken();
+    setCreating(false);
+    if (token) setNewToken(token);
   };
 
   const handleCopy = async () => {
@@ -81,57 +144,98 @@ export default function ExtensionTokens() {
 
   return (
     <div className="flex flex-col gap-5">
-      {newToken && (
-        <div className="cc-card p-5 flex flex-col gap-3 border-[var(--accent)]">
-          <p className="text-sm font-semibold text-[var(--text-1)]">
-            Copy this token now — you won&apos;t be able to see it again
-          </p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 truncate rounded-[0.5rem] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-1)]">
-              {newToken}
-            </code>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="btn-primary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold shrink-0"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5" strokeWidth={2} />
-                  Copy
-                </>
-              )}
-            </button>
-          </div>
+      <div className="cc-card p-5 flex flex-col gap-3">
+        <p className="text-sm font-semibold text-[var(--text-1)]">Connect the extension</p>
+        <p className="text-sm text-[var(--text-2)]">
+          Have the CaptionCraft extension installed? Click below and it connects
+          automatically — nothing to copy.
+        </p>
+        <button
+          type="button"
+          onClick={handleConnectExtension}
+          disabled={connectStatus === "waiting"}
+          className="btn-primary self-start inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {connectStatus === "waiting" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Connecting...
+            </>
+          ) : connectStatus === "connected" ? (
+            <>
+              <Check className="h-4 w-4" strokeWidth={2.5} />
+              Connected
+            </>
+          ) : (
+            "Connect extension"
+          )}
+        </button>
+        {connectStatus === "timeout" && (
           <p className="text-xs text-[var(--text-3)]">
-            Paste it into the CaptionCraft extension popup&apos;s &quot;Connect&quot;
-            field.
+            Didn&apos;t detect the extension. Make sure it&apos;s installed in this
+            browser, then try again — or copy a token manually below.
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <button
-        type="button"
-        onClick={handleCreate}
-        disabled={creating}
-        className="btn-primary self-start inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {creating ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          "Generate a new token"
-        )}
-      </button>
+      <details>
+        <summary className="cursor-pointer text-sm text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+          Copy a token manually instead
+        </summary>
+        <div className="mt-3 flex flex-col gap-3">
+          {newToken && (
+            <div className="cc-card p-5 flex flex-col gap-3 border-[var(--accent)]">
+              <p className="text-sm font-semibold text-[var(--text-1)]">
+                Copy this token now — you won&apos;t be able to see it again
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 min-w-0 truncate rounded-[0.5rem] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-1)]">
+                  {newToken}
+                </code>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="btn-primary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold shrink-0"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" strokeWidth={2} />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-3)]">
+                Paste it into the CaptionCraft extension popup&apos;s &quot;Paste a
+                token manually&quot; field.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={creating}
+            className="btn-ghost self-start inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {creating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              "Generate a new token"
+            )}
+          </button>
+        </div>
+      </details>
 
       <div className="flex flex-col gap-2">
         {tokens === null && <p className="text-sm text-[var(--text-3)]">Loading…</p>}
