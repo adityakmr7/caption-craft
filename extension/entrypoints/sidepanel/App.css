@@ -1,11 +1,17 @@
 /* Matches the web app's light theme tokens (app/globals.css) so the
    extension doesn't feel like a different product. */
 
-.cc-popup {
+html,
+body {
+  height: 100%;
+}
+
+.cc-sidepanel {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 14px;
+  min-height: 100vh;
 }
 
 .cc-header {

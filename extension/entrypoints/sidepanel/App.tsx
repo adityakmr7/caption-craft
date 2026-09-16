@@ -19,7 +19,7 @@ const EMPTY_VARIATION: Variation = { text: "", hashtags: [] };
 
 // Generations always have 3 variations per the /api/generate schema, but
 // this reads arbitrary JSON over the network — fall back to an empty
-// variation rather than crashing the popup on malformed data.
+// variation rather than crashing the side panel on malformed data.
 function variationToUse(g: Generation): Variation {
   const index = g.selectedVariation ?? 0;
   return g.variations[index] ?? g.variations[0] ?? EMPTY_VARIATION;
@@ -71,9 +71,11 @@ export default function App() {
 
   useEffect(() => {
     // Picks up a token the moment the one-click "Connect extension" flow
-    // on the settings page finishes (see connect.content.ts) — without
-    // this, a popup already open during that handshake would keep
-    // showing "not connected" until closed and reopened.
+    // on the settings page finishes (see connect.content.ts) — the side
+    // panel stays open throughout that handshake (unlike a popup, it
+    // doesn't close when you click into the page), so without this
+    // listener it would keep showing "not connected" until manually
+    // closed and reopened.
     const listener = (
       changes: Record<string, { newValue?: unknown; oldValue?: unknown }>,
       areaName: string
@@ -126,7 +128,7 @@ export default function App() {
   };
 
   return (
-    <div className="cc-popup">
+    <div className="cc-sidepanel">
       <header className="cc-header">
         <span className="cc-brand">CaptionCraft</span>
         {view.status === "ready" && (

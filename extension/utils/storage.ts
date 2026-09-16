@@ -1,8 +1,8 @@
 // The extension's own personal access token, stored locally on this
 // device only — never synced, never sent anywhere but the CaptionCraft
 // API. See app/lib/extension-auth.ts on the web app side. Shared between
-// the popup (reads it) and the connect content script (writes it via the
-// auto-connect handshake — see connect.content.ts).
+// the side panel (reads it) and the connect content script (writes it via
+// the auto-connect handshake — see connect.content.ts).
 export const TOKEN_STORAGE_KEY = "captioncraft_token";
 
 export async function getStoredToken(): Promise<string | null> {

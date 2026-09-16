@@ -13,5 +13,12 @@ export default defineConfig({
       // Local dev only — remove before a Chrome Web Store submission.
       "http://localhost:3000/*",
     ],
+    // No popup entrypoint anymore (see entrypoints/sidepanel/ + background.ts,
+    // which makes the toolbar icon open the side panel instead) — WXT only
+    // sets the `action` manifest key itself when a popup entrypoint exists,
+    // so the icon's tooltip is declared here directly.
+    action: {
+      default_title: "CaptionCraft",
+    },
   },
 });

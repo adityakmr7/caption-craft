@@ -123,11 +123,11 @@ export default function ExtensionTokens({ autoConnect = false }: { autoConnect?:
     setNewToken(token);
   }, [mintToken]);
 
-  // Arriving here with ?connect=1 (from the extension popup's "Connect
-  // account" link, possibly round-tripped through a login redirect — see
-  // app/app/extension/page.tsx) means the user already expressed intent
-  // to connect by clicking that link; skip the extra "Connect extension"
-  // click and fire the same flow automatically, once.
+  // Arriving here with ?connect=1 (from the extension side panel's
+  // "Connect account" link, possibly round-tripped through a login
+  // redirect — see app/app/extension/page.tsx) means the user already
+  // expressed intent to connect by clicking that link; skip the extra
+  // "Connect extension" click and fire the same flow automatically, once.
   const autoConnectFired = useRef(false);
   useEffect(() => {
     if (!autoConnect || autoConnectFired.current) return;
@@ -233,8 +233,8 @@ export default function ExtensionTokens({ autoConnect = false }: { autoConnect?:
                 </button>
               </div>
               <p className="text-xs text-[var(--text-3)]">
-                Paste it into the CaptionCraft extension popup&apos;s &quot;Paste a
-                token manually&quot; field.
+                Paste it into the CaptionCraft extension side panel&apos;s
+                &quot;Paste a token manually&quot; field.
               </p>
             </div>
           )}
