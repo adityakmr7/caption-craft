@@ -4,7 +4,7 @@ import { getUserIdFromExtensionToken } from "@/app/lib/extension-auth";
 
 const RECENT_LIMIT = 20;
 
-// Called by the Chrome extension's popup (not a browser page — no
+// Called by the Chrome extension's side panel (not a browser page — no
 // Supabase session cookie available), so auth is via bearer token
 // instead of the usual getUser() cookie check. See
 // app/lib/extension-auth.ts and supabase/migrations/0013_extension_tokens.sql.

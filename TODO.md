@@ -1,6 +1,6 @@
 # TODO
 
-**Last updated:** 2026-09-17 (Chrome extension now opens as a side panel, not a popup — see PR #23. Also: waitlist gate removed, extension login-redirect auto-connects.)
+**Last updated:** 2026-09-17 (Chrome extension: PR #24 adds a live "why Insert would fail" status banner + anonymous breakage telemetry, held unmerged pending your test per explicit instruction. Side panel migration (PR #23), waitlist removal, and extension login-redirect auto-connect are shipped.)
 
 Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md](./docs/ROADMAP.md); for the dated build log see [docs/CHANGELOG.md](./docs/CHANGELOG.md). Everything below is verified against the live app/production config as of this date, not just doc claims — a couple of items in ROADMAP.md's "Still open" list (Razorpay checkout, the firewall rule) are actually done and are marked shipped here.
 
@@ -72,9 +72,11 @@ Quick-glance status. For the full phased plan and reasoning see [docs/ROADMAP.md
 
 ## ⏳ Remaining
 
-### Chrome extension — one manual step to finish verifying
-- [ ] **Reload the extension and test on real LinkedIn** — needs you: `cd extension && npm run build` (already done as of this update), then `chrome://extensions` → click the reload icon on the CaptionCraft card (or **Load unpacked** → select `extension/.output/chrome-mv3/` if not loaded yet) → **refresh any already-open LinkedIn tabs** (a tab open since before a reload keeps running the old content script — this is almost certainly why "Insert" appeared to still fail after the compose-box fix in PR #20). This whole cycle is a native OS flow browser automation is deliberately blocked from driving. Everything else — token issuing, the API the side panel calls, revocation, and the one-click connect handshake's web-app side — is already verified against production.
-- [ ] Once reloaded: click the toolbar icon and confirm it opens as a **side panel** (not a popup) — this is new as of PR #23. Click "Connect account →" (opens `/app/extension`), click "Connect extension" there, and confirm the side panel flips to showing your post list automatically. Then test "Insert" on an actual LinkedIn post/comment box and confirm the text lands correctly. Report back anything that breaks — both the connect handshake's extension-side content script and the compose-box-finding logic in `extension/entrypoints/content.ts` (reverse-engineered from LinkedIn's DOM) are the parts of this that could genuinely not work first try.
+### Chrome extension — PR #24 open, held back pending your test (per explicit instruction: "First fix this and test before making any deployment")
+- [ ] **Reload the extension and test on real LinkedIn.** The build is already fresh on disk (`extension/.output/chrome-mv3/`) regardless of whether PR #24 is merged — merging only affects the backend telemetry route, not what's loaded in Chrome. Steps: `chrome://extensions` → reload the CaptionCraft card → **refresh any already-open LinkedIn tabs** (a tab open since before a reload keeps running the old content script) → open the side panel.
+- [ ] **What's new to check for** (PR #24, unmerged): the side panel now proactively polls the active tab every 2s and shows a small amber banner explaining exactly why Insert would fail right now — "switch to your LinkedIn tab," "refresh the LinkedIn tab" (extension not injected there yet), or "open a post/comment box first" — instead of only finding out after clicking. Confirm the banner appears/disappears correctly as you open and close a compose box, then confirm Insert actually lands text.
+- [ ] **Also new**: anonymous breakage telemetry (`POST /api/extension/telemetry`, `supabase/migrations/0014_extension_telemetry.sql`, already applied to production) — fires only on a real failed Insert click, reporting a reason enum + coarse surface category, no user id or page content. This is the fix for "we only find out the selector broke from a bug report" — see `extension/README.md`'s "Breakage telemetry" section for exactly what is and isn't sent.
+- [ ] Once you confirm Insert actually works: I'll merge PR #24 (deploys the telemetry route; the extension side is already testable pre-merge).
 - [ ] Decide whether/when to update the landing page's "Coming later" Chrome extension teaser once it's actually usable by someone outside this session.
 - [ ] Chrome Web Store submission (icon assets, listing copy, review) — not started, a separate step from building it.
 

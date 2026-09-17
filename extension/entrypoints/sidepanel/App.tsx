@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   ApiError,
+  classifySurface,
   fetchGenerations,
+  reportComposeBoxTelemetry,
   tokenSettingsUrl,
   type Generation,
   type Variation,
@@ -193,6 +195,13 @@ export default function App() {
       } else {
         setTargetStatus("no-compose-box");
         setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
+        // A real Insert click — not just the passive poll — found no
+        // compose box. That's either the user genuinely not having one
+        // open, or LinkedIn having changed its DOM again; this is the
+        // signal that lets the latter surface without waiting for a bug
+        // report. Deliberately not reported from the poll itself, which
+        // would fire constantly during ordinary idle browsing.
+        reportComposeBoxTelemetry("no-compose-box", classifySurface(tab.url));
       }
     } catch {
       // No content script listening — most often means the LinkedIn tab
@@ -200,6 +209,7 @@ export default function App() {
       // been refreshed yet.
       setTargetStatus("no-content-script");
       setInsertStatus((s) => ({ ...s, [g.id]: "failed" }));
+      reportComposeBoxTelemetry("no-content-script", classifySurface(tab.url));
     }
   };
 
