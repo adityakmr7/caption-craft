@@ -12,12 +12,28 @@ interface InsertPostMessage {
   text: string;
 }
 
+interface PingMessage {
+  type: "CAPTIONCRAFT_PING";
+}
+
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main() {
     browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-      if (!isInsertPostMessage(message)) return;
-      sendResponse({ ok: insertIntoComposeBox(message.text) });
+      if (isInsertPostMessage(message)) {
+        sendResponse({ ok: insertIntoComposeBox(message.text) });
+        return;
+      }
+      if (isPingMessage(message)) {
+        // Lets the side panel tell, before the user clicks Insert, whether
+        // there's actually anything to insert into right now — the
+        // alternative (only finding out after a failed Insert) is exactly
+        // what made an earlier version of this confusing: the panel had no
+        // way to distinguish "no compose box open" from "extension not
+        // running here" from "wrong tab", so every failure looked the same.
+        sendResponse({ ok: true, hasComposeBox: findComposeBox() !== null });
+        return;
+      }
     });
   },
 });
@@ -28,6 +44,14 @@ function isInsertPostMessage(message: unknown): message is InsertPostMessage {
     message !== null &&
     (message as { type?: unknown }).type === "CAPTIONCRAFT_INSERT_POST" &&
     typeof (message as { text?: unknown }).text === "string"
+  );
+}
+
+function isPingMessage(message: unknown): message is PingMessage {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    (message as { type?: unknown }).type === "CAPTIONCRAFT_PING"
   );
 }
 

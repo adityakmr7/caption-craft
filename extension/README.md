@@ -80,6 +80,25 @@ how these are issued and verified. Two ways to connect:
   extension's token, used by both the side panel and the connect
   content script.
 
+### Breakage telemetry
+
+`content.ts` answers a `CAPTIONCRAFT_PING` message with whether a
+compose box currently exists (`hasComposeBox`), which the side panel
+polls every 2s to show a live status banner *before* the user clicks
+Insert. Separately, when an actual Insert click fails, the side panel
+reports that anonymously to `POST /api/extension/telemetry` — see
+`classifySurface`/`reportComposeBoxTelemetry` in `entrypoints/sidepanel/api.ts`
+and `supabase/migrations/0014_extension_telemetry.sql`. This exists
+because the selector has already broken once from a LinkedIn DOM change
+(Quill → Tiptap/ProseMirror) and the team only found out from a user
+report — the goal is to find out from the data instead. The payload is
+deliberately minimal: a `reason` enum, a coarse `surface` category
+derived client-side from the tab's URL *path* (never the raw URL), and
+the extension version. No user id, no LinkedIn page content, nothing
+that identifies a person or what they were posting about. Fired only
+from a real Insert attempt, never from the passive poll (which would
+otherwise fire constantly during ordinary idle browsing).
+
 ### Why a side panel, not a popup
 
 A `default_popup` closes the instant it loses focus — including when

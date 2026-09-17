@@ -69,6 +69,22 @@ type Database = {
         Update: never;
         Relationships: [];
       };
+      extension_telemetry: {
+        Row: {
+          id: string;
+          reason: "no-compose-box" | "no-content-script";
+          surface: "feed" | "compose" | "messaging" | "profile-post" | "other";
+          extension_version: string | null;
+          created_at: string;
+        };
+        Insert: {
+          reason: "no-compose-box" | "no-content-script";
+          surface: "feed" | "compose" | "messaging" | "profile-post" | "other";
+          extension_version?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
