@@ -6,7 +6,6 @@ import {
   ArrowDown,
   ArrowRight,
   Check,
-  ChevronDown,
   ClipboardCheck,
   Hash,
   History,
@@ -324,51 +323,6 @@ function DemoCard() {
   );
 }
 
-function VoiceMatchCard() {
-  const samples = [
-    "shipped our billing rewrite this weekend, way overdue lol",
-    "3 customers churned this month and honestly all for good reasons",
-  ];
-
-  return (
-    <div className="cc-card p-4 flex flex-col gap-3.5">
-      <div className="rounded-[0.625rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4 flex flex-col gap-2.5">
-        <span className="font-mono-cc text-[11px] text-[var(--text-3)]">
-          your past posts
-        </span>
-        {samples.map((s) => (
-          <p
-            key={s}
-            className="text-[13px] leading-relaxed text-[var(--text-2)] italic"
-          >
-            &ldquo;{s}&rdquo;
-          </p>
-        ))}
-      </div>
-
-      <div className="flex justify-center text-[var(--text-3)]">
-        <ArrowDown className="h-4 w-4" strokeWidth={2} />
-      </div>
-
-      <div className="rounded-[0.625rem] border border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-[color-mix(in_srgb,var(--accent)_7%,var(--bg-elevated))] p-4 flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <span className="font-mono-cc text-[11px] text-[var(--text-3)]">
-            new generation
-          </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)]">
-            <Check className="h-3 w-3" strokeWidth={3} />
-            sounds like you
-          </span>
-        </div>
-        <p className="text-[13.5px] leading-relaxed text-[var(--text-1)]">
-          finally rewrote our billing system this weekend — long overdue, but
-          it&apos;s done.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function Hero() {
   return (
     <section className="relative pt-28 pb-16">
@@ -417,33 +371,24 @@ function Hero() {
             </a>
           </HeroReveal>
 
+          <HeroReveal delay={0.48} className="flex flex-wrap gap-6">
+            {HERO_STATS.map((s) => (
+              <div key={s.label}>
+                <div className="font-mono-cc text-sm font-semibold text-[var(--text-1)]">
+                  {s.value}
+                </div>
+                <div className="text-xs text-[var(--text-3)] max-w-[20ch]">
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </HeroReveal>
         </div>
 
         <HeroReveal delay={0.2}>
           <DemoCard />
         </HeroReveal>
       </div>
-    </section>
-  );
-}
-
-/* ---------- metrics bar ---------- */
-
-function MetricsBar() {
-  return (
-    <section className="border-y border-[var(--border-soft)] bg-[var(--bg-elevated)] py-10">
-      <Reveal className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border-soft)]">
-        {HERO_STATS.map((s) => (
-          <div key={s.label} className="text-center py-4 sm:py-0 first:pt-0">
-            <div className="font-mono-cc text-3xl md:text-4xl font-bold text-[var(--text-1)]">
-              {s.value}
-            </div>
-            <div className="mt-1.5 text-sm text-[var(--text-3)] max-w-[26ch] mx-auto">
-              {s.label}
-            </div>
-          </div>
-        ))}
-      </Reveal>
     </section>
   );
 }
@@ -581,48 +526,27 @@ function Features() {
           </h2>
         </Reveal>
 
-        <div className="flex flex-col gap-16 mb-16">
-          <Reveal className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
-            <div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)] mb-4">
-                <ImagePlus className="h-4 w-4" strokeWidth={2.1} />
-              </div>
-              <h3 className="text-xl font-semibold text-[var(--text-1)] mb-3">
-                Screenshot-first generation
-              </h3>
-              <p className="text-[15px] leading-relaxed text-[var(--text-2)] max-w-[46ch]">
-                Every other LinkedIn tool starts with a blank prompt or a
-                topic idea. We start with the thing you already have open —
-                the metric, the merge, the milestone — so the post is
-                specific, not generic.
-              </p>
-            </div>
-            <DemoCard />
-          </Reveal>
-
-          <Reveal className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
-            <div className="md:order-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)] mb-4">
-                <History className="h-4 w-4" strokeWidth={2.1} />
-              </div>
-              <h3 className="text-xl font-semibold text-[var(--text-1)] mb-3">
-                Sounds like you, not a prompt
-              </h3>
-              <p className="text-[15px] leading-relaxed text-[var(--text-2)] max-w-[46ch]">
-                Paste 2–3 of your own past posts once. Every generation after
-                that is written to match your rhythm and phrasing — never
-                reusing your old facts, just your voice.
-              </p>
-            </div>
-            <div className="md:order-1">
-              <VoiceMatchCard />
-            </div>
-          </Reveal>
-        </div>
-
         <div className="grid gap-5 md:grid-cols-6">
           <RevealItem
             index={0}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-4"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
+              <ImagePlus className="h-4 w-4" strokeWidth={2.1} />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-1)]">
+              Screenshot-first generation
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--text-2)] max-w-[44ch]">
+              Every other LinkedIn tool starts with a blank prompt or a topic
+              idea. We start with the thing you already have open — the
+              metric, the merge, the milestone — so the post is specific, not
+              generic.
+            </p>
+          </RevealItem>
+
+          <RevealItem
+            index={1}
             className="cc-card p-7 flex flex-col gap-3 md:col-span-2"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
@@ -645,8 +569,8 @@ function Features() {
           </RevealItem>
 
           <RevealItem
-            index={1}
-            className="cc-card p-7 flex flex-col gap-3 md:col-span-2"
+            index={2}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-3"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
               <Hash className="h-4 w-4" strokeWidth={2.1} />
@@ -662,8 +586,8 @@ function Features() {
           </RevealItem>
 
           <RevealItem
-            index={2}
-            className="cc-card p-7 flex flex-col gap-3 md:col-span-2"
+            index={3}
+            className="cc-card p-7 flex flex-col gap-3 md:col-span-3"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]">
               <History className="h-4 w-4" strokeWidth={2.1} />
@@ -679,7 +603,7 @@ function Features() {
         </div>
 
         <RevealItem
-          index={3}
+          index={4}
           className="mt-5 rounded-[0.875rem] border border-dashed border-[var(--border)] p-6 flex items-center gap-4"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.625rem] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--text-3)]">
@@ -863,19 +787,15 @@ function FAQ() {
 
         <div className="flex flex-col gap-3 max-w-2xl">
           {FAQS.map((f, i) => (
-            <RevealItem key={f.q} index={i}>
-              <details name="faq" className="cc-card px-6 py-5 group">
-                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none text-[15px] font-semibold text-[var(--text-1)]">
-                  {f.q}
-                  <ChevronDown
-                    className="h-4 w-4 shrink-0 text-[var(--text-3)] transition-transform duration-200 group-open:rotate-180"
-                    strokeWidth={2.2}
-                  />
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--text-2)]">
-                  {f.a}
-                </p>
-              </details>
+            <RevealItem
+              key={f.q}
+              index={i}
+              className="cc-card px-6 py-5"
+            >
+              <p className="text-[15px] font-semibold text-[var(--text-1)] mb-2">
+                {f.q}
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--text-2)]">{f.a}</p>
             </RevealItem>
           ))}
         </div>
@@ -950,7 +870,6 @@ export default function CaptionCraftLanding() {
       <Navbar />
       <main>
         <Hero />
-        <MetricsBar />
         <CommunityStrip />
         <ProblemSolution />
         <HowItWorks />
